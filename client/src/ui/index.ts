@@ -14,7 +14,7 @@ import type { Selection, WorldApi } from '../world/api';
 import type { PanelName, TerminalRouter, UiComponent, UiContext } from './context';
 import { DayLauncher } from './daystats-launcher';
 import { RoomRenamer } from './roomrename';
-import { h } from './dom';
+import { h, phoneLayout } from './dom';
 import { Drawer } from './drawer';
 import { FeedPanel } from './feed';
 import { HelpDialog } from './help';
@@ -107,6 +107,11 @@ export function createUI(root: HTMLElement, store: OfficeStore, world: WorldApi,
       // Na cidade o escritório (gaveta, terminal) fica escondido: escolher um agente ou sala volta para ele. Antes de
       // tudo: a área livre só mede a gaveta e a barra lateral sem a classe `is-city`.
       scene?.leaveFor(sel);
+      // Celular: uma folha por vez. Abrir os detalhes fecha a barra lateral e o feed aberto.
+      if (sel && phoneLayout()) {
+        if (panels.sidebar) ctx.togglePanel('sidebar', false);
+        if (panels.feed) ctx.togglePanel('feed', false);
+      }
       if (sel && opts?.focus) area.setIntent(sel);
       else area.clearIntent();
       // A gaveta passa a contar na área livre ANTES do foco: o mundo centraliza já na parte visível.
@@ -142,6 +147,12 @@ export function createUI(root: HTMLElement, store: OfficeStore, world: WorldApi,
     togglePanel(name, open) {
       const next = open ?? !panels[name];
       if (panels[name] === next) return;
+      // Celular: uma folha por vez. Abrir a barra lateral ou o feed fecha a outra e os detalhes.
+      if (next && phoneLayout()) {
+        const other = name === 'sidebar' ? 'feed' : 'sidebar';
+        if (panels[other]) ctx.togglePanel(other, false);
+        if (selection) ctx.select(null);
+      }
       panels[name] = next;
       if (!ctx.isNarrow()) ctx.updatePrefs(name === 'sidebar' ? { sidebarOpen: next } : { feedOpen: next });
       applyLayout();
@@ -233,6 +244,13 @@ export function createUI(root: HTMLElement, store: OfficeStore, world: WorldApi,
     if (url.search && location.search === url.search) window.history.replaceState(null, '', location.pathname);
   };
   if (typeof location !== 'undefined') openLink(new URL(location.href));
+  // Toque numa notificação do celular com o Habblaud aberto: o service worker (/sw.js) manda o link do aviso para cá.
+  if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', (e) => {
+      const d = e.data as { type?: unknown; url?: unknown } | null;
+      if (d?.type === 'habblaud:open' && typeof d.url === 'string') openLink(new URL(d.url, location.href));
+    });
+  }
   drawer = new Drawer(ctx, terminal, pty);
   const feed = new FeedPanel(ctx);
   const toasts = new Toasts(ctx);

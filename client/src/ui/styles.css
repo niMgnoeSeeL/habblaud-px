@@ -6,6 +6,8 @@
 .ui-root {
   --ui-bg: rgba(18, 21, 29, 0.85);
   --ui-bg-solid: rgba(20, 24, 33, 0.97);
+  /* Folhas no celular: sem nada do escritório passando por trás (lê-se o texto, não a sala). */
+  --ui-bg-opaque: rgb(20, 24, 33);
   --ui-bg-soft: rgba(255, 255, 255, 0.035);
   --ui-bg-hover: rgba(255, 255, 255, 0.06);
   --ui-line: rgba(160, 176, 210, 0.13);
@@ -2535,6 +2537,17 @@
     bottom 0.3s var(--ease);
 }
 
+/* Só o que cabe entre a barra do topo e a folha/feed (altura em ui/viewport.ts); o aviso que não cabe inteiro fica
+   escondido (ui/toasts.ts) até sobrar espaço. */
+.ui-toasts {
+  max-height: var(--toast-max-h, none);
+}
+
+.ui-toast.is-clipped {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .has-popover .ui-toasts {
   opacity: 0;
   visibility: hidden;
@@ -4146,14 +4159,19 @@
     /* Com 4 ou mais contas os cartões mantêm o mínimo de 128 px e não cabem: a fila rola (a dica já é fixa aqui). */
     overflow-x: auto;
     scrollbar-width: none;
+    scroll-snap-type: x proximity;
+    overscroll-behavior-x: contain;
   }
 
+  /* Os cartões não encolhem abaixo de 120 px (o que cabe a porcentagem e o reinício): sem espaço, a fila rola, com a
+     ponta cortada esmaecida (dom.ts, scrollCue). */
   .ui-usage-card {
-    flex: 1 1 0;
+    flex: 1 0 auto;
     width: auto;
-    min-width: 0;
+    min-width: 120px;
     gap: 6px;
     padding: 4px 6px 4px 4px;
+    scroll-snap-align: start;
   }
 
   .ui-usage-card > .ui-acc-chip {
@@ -7466,8 +7484,9 @@ html.is-replay #world {
   }
 }
 
-/* Entre o celular e o tablet a barra superior fica apertada com o botão "Meu dia": a visão geral segue no atalho O. */
-@media (min-width: 601px) and (max-width: 760px) {
+/* Entre o celular e o tablet a barra superior fica apertada com o botão "Meu dia": a visão geral segue no atalho O.
+   Na tela de toque não há atalho, então o botão fica. */
+@media (min-width: 601px) and (max-width: 760px) and (pointer: fine) {
   .ui-topbar__right .ui-btn-group:first-child {
     display: none;
   }
@@ -9012,29 +9031,325 @@ html.is-replay #world {
   bottom: calc(var(--gap) + env(safe-area-inset-bottom, 0px));
 }
 
+/* Celular: a folha encosta acima da barra de gestos e, com o teclado da tela aberto, acima dele (--kb, o quanto o
+   teclado cobre, de ui/viewport.ts a partir do visualViewport). */
 @media (max-width: 600px) {
   .ui-drawer {
-    bottom: calc(var(--gap) + env(safe-area-inset-bottom, 0px));
+    bottom: calc(var(--gap) + max(env(safe-area-inset-bottom, 0px), var(--kb, 0px)));
+    height: min(58vh, calc(100vh - var(--top-h) - var(--gap) * 2 - var(--kb, 0px)));
   }
 }
 
-/* Celular: atalhos de teclado não servem para nada; a caixa de mensagem fica sempre à mão no rodapé da gaveta. */
+/* Celular deitado (pouca altura e toque): a gaveta lateral também sobe com o teclado. */
+@media (min-width: 601px) and (max-height: 500px) and (pointer: coarse) {
+  .ui-drawer {
+    bottom: calc(var(--gap) + max(env(safe-area-inset-bottom, 0px), var(--kb, 0px)));
+  }
+}
+
+/* Celular: atalhos de teclado não servem para nada; a caixa de mensagem fica sempre à mão no rodapé da gaveta. Segurar
+   uma sala, um agente ou uma aba para reordenar (ui/touchreorder.ts) não abre o menu do sistema nem seleciona texto. */
 @media (pointer: coarse) {
   .ui-kbd {
     display: none !important;
   }
+
+  .ui-room__head[draggable='true'],
+  .ui-node__head[draggable='true'],
+  .ui-ttab[draggable='true'] {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
 }
 
-@media (max-width: 600px) {
+/* Fila que rola na horizontal (cartões de uso, abas do terminal): a ponta cortada esmaece, sinal de que há mais
+   (ui/dom.ts, scrollCue). */
+.is-cut-end {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+}
+
+.is-cut-start {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 28px);
+  mask-image: linear-gradient(to right, transparent, #000 28px);
+}
+
+.is-cut-start.is-cut-end {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent);
+}
+
+/* Notificações no celular (ui/push.ts) em Configurações › Avisos: o botão de teste embaixo do interruptor. */
+.ui-set-push .ui-set__action {
+  margin: 2px 0 10px;
+}
+
+/* ⋯ Mais opções (ui/moremenu.ts): no toque, os botões que a largura tirou da barra do topo. */
+.ui-more {
+  position: fixed;
+  z-index: 60;
+  min-width: 220px;
+  max-width: calc(100vw - 16px);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--ui-bg-opaque);
+  border: 1px solid var(--ui-line-strong);
+  border-radius: 10px;
+  box-shadow: 0 16px 40px rgba(5, 7, 12, 0.5);
+}
+
+.ui-more[hidden] {
+  display: none;
+}
+
+.ui-more:focus {
+  outline: none;
+}
+
+.ui-more__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 0 12px;
+  font: 13px/1.2 var(--font-ui);
+  color: var(--ui-text);
+  text-align: left;
+  background: none;
+  border: 0;
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.ui-more__item:hover,
+.ui-more__item:focus-visible {
+  background: var(--ui-bg-hover);
+}
+
+/* Celular de toque: alvos de 44 px (Apple HIG; WCAG 2.5.8 pede 24). Botões, ícones e os cartões de uso; links no meio do
+   texto ficam como estão (exceção da 2.5.8). */
+@media (max-width: 600px) and (pointer: coarse), (max-height: 500px) and (pointer: coarse) {
+  .ui-root .ui-icon-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .ui-root .ui-btn,
+  .ui-toast__answer,
+  .ui-feed__title,
+  .ui-feed__row,
+  .ui-feed__new,
+  .ui-search__input,
+  .ui-acc-filter,
+  .ui-seg__opt,
+  .ui-lapse__day,
+  .ui-lapse__range,
+  .ui-day__select,
+  .ui-spawn__other,
+  .ui-perm-ask__opt,
+  .ui-perm__check-row,
+  .ui-counter,
+  .ui-msg__input,
+  .ui-toast__body {
+    min-height: 44px;
+  }
+
+  .ui-seg__opt {
+    min-width: 44px;
+  }
+
+  /* O select do dia do timelapse com a aparência própria (a do WebKit ignora a altura), a mesma seta do Meu dia. */
+  .ui-lapse__day {
+    padding: 0 30px 0 10px;
+    background: var(--ui-bg-soft)
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5' shape-rendering='crispEdges'%3E%3Cpath fill='%239aa4b8' d='M0 0h2v1H0zM6 0h2v1H6zM1 1h2v1H1zM5 1h2v1H5zM2 2h4v1H2zM3 3h2v1H3z'/%3E%3C/svg%3E")
+      no-repeat right 10px center / 8px 5px;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  /* Interruptor no tamanho do iOS (51 × 31), com a área de toque de 44 px de altura: o trilho vai no ::before. */
+  .ui-switch {
+    width: 51px;
+    height: 44px;
+    background: none;
+    border: 0;
+  }
+
+  .ui-switch::before {
+    content: '';
+    position: absolute;
+    inset: 6.5px 0;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--ui-line-strong);
+    transition: background-color 0.2s;
+  }
+
+  .ui-switch[aria-checked='true'] {
+    background: none;
+  }
+
+  .ui-switch[aria-checked='true']::before {
+    background: #2f7fd1;
+    border-color: #58a6f2;
+  }
+
+  .ui-switch__knob {
+    top: 10.5px;
+    left: 4px;
+    width: 23px;
+    height: 23px;
+    border-radius: 6px;
+  }
+
+  .ui-switch[aria-checked='true'] .ui-switch__knob {
+    transform: translateX(20px);
+  }
+
+  /* Onde 44 px não cabe sem cobrir o vizinho, o mínimo da WCAG 2.5.8 (24 px): o "Ativar" dentro do cartão de uso e os
+     picos na linha do timelapse (a uns 30 px um do outro; a barra de reprodução, logo abaixo, faz o mesmo). */
+  .ui-usage-card__how {
+    height: 24px;
+  }
+
+  .ui-lapse__peak {
+    width: 24px;
+    height: 24px;
+    top: -18px;
+  }
+}
+
+/* Celular em pé (até 480 px, toque): com botões de 44 px, a barra do topo fica com a barra lateral, as Entregas, o Novo
+   agente e o ⋯; a visão geral, Meu dia, o histórico, o timelapse, as configurações e a ajuda vão para o ⋯
+   (ui/moremenu.ts, que mostra o que a largura tirou da barra). */
+@media (max-width: 480px) and (pointer: coarse) {
+  .ui-topbar .ui-btn-sidebar,
+  .ui-topbar__right .ui-icon-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  .ui-topbar__right .ui-btn-group:first-child,
+  .ui-topbar__right .ui-btn-group > button:not(.ui-btn-deliv, .ui-btn-spawn, .ui-btn-more) {
+    display: none;
+  }
+
+  .ui-counter,
+  .ui-usage-card {
+    min-height: 44px;
+  }
+}
+
+/* Linha da caixa de mensagem dobrada (gaveta do agente com um pedido no cartão): só existe no celular. */
+.ui-msg__fold {
+  display: none;
+}
+
+/* Celular, em pé ou deitado: folhas opacas, a caixa de mensagem presa no rodapé da gaveta e, com um pedido no cartão,
+   a barra dos botões dele no rodapé no lugar da caixa (dobrada numa linha que abre ao toque). */
+@media (max-width: 600px), (max-height: 500px) and (pointer: coarse) {
+  /* Diálogos e popovers (ajuda, configurações, histórico...) também opacos. */
+  .ui-root {
+    --ui-bg-solid: var(--ui-bg-opaque);
+  }
+
+  .ui-panel {
+    background: var(--ui-bg-opaque);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
   .ui-sec--msg {
     position: sticky;
     bottom: -20px;
     z-index: 2;
     margin: 0 -16px;
     padding: 10px 16px 14px;
-    background: var(--ui-bg-solid);
+    background: var(--ui-bg-opaque);
     border-top: 1px solid var(--ui-line);
     box-shadow: 0 -12px 24px rgba(5, 7, 12, 0.35);
+  }
+
+  /* Com o cartão: a caixa volta para o meio da conversa (aberta) ou vira uma linha (dobrada). */
+  .ui-sec--msg.is-beside-card {
+    position: static;
+    margin: 14px 0 0;
+    padding: 0;
+    background: none;
+    border-top: 0;
+    box-shadow: none;
+  }
+
+  .ui-sec--msg.is-folded > :not(.ui-msg__fold) {
+    display: none;
+  }
+
+  .ui-sec--msg.is-folded > .ui-msg__fold {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-height: 44px;
+    padding: 0 14px;
+    font: 500 13px/1.2 var(--font-ui);
+    color: var(--ui-text);
+    background: var(--ui-bg-soft);
+    border: 1px solid var(--ui-line);
+    border-radius: 8px;
+    cursor: pointer;
+  }
+
+  .ui-sec--msg.is-folded > .ui-msg__fold::after {
+    content: '▸';
+    color: var(--ui-muted);
+  }
+
+  /* A barra dos botões do cartão fica no rodapé da gaveta enquanto o pedido existe (ui/permission.ts, dockActions), no
+     lugar da caixa de mensagem; com o formulário da recusa aberto, quem fica no rodapé é a barra dele. */
+  .ui-perm-bar,
+  .ui-perm__deny > .ui-perm__actions {
+    position: sticky;
+    bottom: -20px;
+    z-index: 3;
+    background:
+      linear-gradient(rgba(255, 181, 71, 0.1), rgba(255, 181, 71, 0.1)),
+      var(--ui-bg-opaque);
+    border-top: 1px solid rgba(255, 181, 71, 0.5);
+    box-shadow: 0 -12px 24px rgba(5, 7, 12, 0.35);
+  }
+
+  .ui-perm-bar {
+    margin: 14px -16px 0;
+    padding: 10px 16px 14px;
+  }
+
+  .ui-perm-bar > .ui-perm__actions {
+    margin-top: 0;
+  }
+
+  .ui-perm__deny > .ui-perm__actions {
+    margin: 10px -12px 0;
+    padding: 10px 12px;
+  }
+
+  .ui-perm__actions .ui-perm__btn {
+    min-height: 44px;
+  }
+
+  /* Cabeça do cartão: o prazo desce para a linha de baixo em vez de espremer o título. */
+  .ui-perm__head {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .ui-perm__timer {
+    grid-column: 2;
+    text-align: left;
+    white-space: normal;
+    padding-top: 0;
   }
 }
 

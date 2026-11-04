@@ -12,6 +12,7 @@ import { officeIsEmpty } from './overlays';
 import { createAgentRow, updateAgentRow } from './rows';
 import { createAccountChip, createProgress, updateAccountChip, updateProgress } from './widgets';
 import { tr } from '../../../shared/i18n';
+import { wireTouchReorder } from './touchreorder';
 
 interface RoomRefs {
   head: HTMLButtonElement;
@@ -274,6 +275,7 @@ export class Sidebar implements UiComponent {
   /** Arrastar o cabeçalho de uma sala reordena as salas da lista. */
   private wireRoomDrag(head: HTMLElement, roomId: string): void {
     head.draggable = true;
+    head.dataset.reorderRoom = roomId;
     const after = (e: DragEvent) => {
       const rect = head.getBoundingClientRect();
       return e.clientY > rect.top + rect.height / 2;
@@ -309,6 +311,27 @@ export class Sidebar implements UiComponent {
       if (!from || from === roomId) return;
       e.preventDefault();
       if (moveRoom(this.shownRooms, from, roomId, after(e))) this.ctx.invalidate();
+    });
+    // No toque: segurar o cabeçalho e arrastar (touchreorder.ts).
+    wireTouchReorder(head, {
+      targets: () => [...this.el.querySelectorAll<HTMLElement>('.ui-room__head[data-reorder-room]')],
+      start: () => {
+        this.draggingRoom = roomId;
+        head.classList.add('is-dragging');
+      },
+      over: (t, a) => {
+        clear();
+        t?.classList.add(a ? 'is-drop-after' : 'is-drop-before');
+      },
+      drop: (t, a) => {
+        const to = t.dataset.reorderRoom;
+        if (to && to !== roomId && moveRoom(this.shownRooms, roomId, to, a)) this.ctx.invalidate();
+      },
+      end: () => {
+        this.draggingRoom = null;
+        head.classList.remove('is-dragging');
+        clear();
+      },
     });
   }
 
@@ -353,6 +376,28 @@ export class Sidebar implements UiComponent {
       e.preventDefault();
       const shown = this.shown.get(d.room) ?? [];
       if (moveAgent(d.room, shown, (n) => n.agent.id, (n) => n.agent.sessionId, d.id, id(), after(e))) this.ctx.invalidate();
+    });
+    // No toque: segurar a linha e arrastar dentro da mesma sala (touchreorder.ts).
+    wireTouchReorder(head, {
+      targets: () => [...this.el.querySelectorAll<HTMLElement>('.ui-node__head')].filter((el) => el.dataset.room === room()),
+      start: () => {
+        this.dragging = { id: id(), room: room() };
+        head.classList.add('is-dragging');
+      },
+      over: (t, a) => {
+        clear();
+        t?.classList.add(a ? 'is-drop-after' : 'is-drop-before');
+      },
+      drop: (t, a) => {
+        const to = t.dataset.id;
+        const shown = this.shown.get(room()) ?? [];
+        if (to && to !== id() && moveAgent(room(), shown, (n) => n.agent.id, (n) => n.agent.sessionId, id(), to, a)) this.ctx.invalidate();
+      },
+      end: () => {
+        this.dragging = null;
+        head.classList.remove('is-dragging');
+        clear();
+      },
     });
   }
 

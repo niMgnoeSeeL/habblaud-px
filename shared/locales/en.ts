@@ -95,6 +95,8 @@ export const EN: Readonly<Record<string, string>> = {
   "Para mandar mensagens por aqui, abra o Habblaud por http://localhost (ou 127.0.0.1)": "To send messages from here, open Habblaud at http://localhost (or 127.0.0.1)",
   "Entra na fila da sessão e vira o próximo prompt quando o Codex terminar o que está fazendo. Enter manda; Shift+Enter quebra a linha.": "Joins the session queue and becomes the next prompt when Codex finishes what it's doing. Enter sends; Shift+Enter adds a new line.",
   "Entra na sessão como se você tivesse digitado. Enter manda; Shift+Enter quebra a linha.": "Goes into the session as if you had typed it. Enter sends; Shift+Enter adds a new line.",
+  "Entra na sessão como se você tivesse digitado.": "Goes into the session as if you had typed it.",
+  "Entra na fila da sessão e vira o próximo prompt quando o Codex terminar o que está fazendo.": "Joins the session queue and becomes the next prompt when Codex finishes what it's doing.",
   "Enviando…": "Sending…",
   "Na fila: entregando ao Codex…": "Queued: delivering to Codex…",
   "Na fila: esperando a sessão buscar a mensagem…": "Queued: waiting for the session to pick up the message…",
@@ -211,6 +213,7 @@ export const EN: Readonly<Record<string, string>> = {
   "só tokens": "tokens only",
 
   // client/src/ui/drawer.ts
+  "Responder ao pedido": "Answer the request",
   "Copiado!": "Copied!",
   "Não foi possível copiar": "Couldn't copy",
   "concluída": "completed",
@@ -296,7 +299,11 @@ export const EN: Readonly<Record<string, string>> = {
   "Subagente": "Subagent",
   "Agente": "Agent",
 
+  // client/src/ui/moremenu.ts
+  "Mais opções": "More options",
+
   // client/src/ui/feed.ts
+  "{0} em {1}": "{0} in {1}",
   "Eventos recentes": "Recent events",
   "Os eventos dos agentes aparecem aqui assim que acontecem.": "Agent events show up here as soon as they happen.",
   "Feed de atividade": "Activity feed",
@@ -3273,4 +3280,27 @@ export const EN: Readonly<Record<string, string>> = {
   "Carimbo deixado na portaria: {0}": "Stamp left at the front desk: {0}",
   "Entre no prédio ou chegue mais perto da porta para carimbar.": "Go into the building or get closer to the door to stamp.",
   "O carimbo não foi deixado. Tente de novo.": "The stamp wasn't left. Try again.",
+
+  // client/src/ui/push.ts, client/src/ui/settings.ts e server/push (notificações no celular)
+  "Este navegador não recebe notificações push.": "This browser doesn't receive push notifications.",
+  "Precisa do acesso do celular por HTTPS (npm run remote:setup).": "Needs the phone access over HTTPS (npm run remote:setup).",
+  "No iPhone: Compartilhar › Adicionar à Tela de Início, e abra o Habblaud por lá.": "On iPhone: Share › Add to Home Screen, then open Habblaud from there.",
+  "Bloqueadas no aparelho: libere em Ajustes › Notificações › Habblaud.": "Blocked on this device: allow them in Settings › Notifications › Habblaud.",
+  "Avisa no celular quando alguém precisa de você ou termina o que estava fazendo, se o Mac estiver parado há 2 min.": "Notifies your phone when someone needs you or finishes what it was doing, if the Mac has been idle for 2 min.",
+  "Notificações bloqueadas no aparelho.": "Notifications blocked on this device.",
+  "este aparelho não está assinado": "this device isn't subscribed",
+  "Notificações no celular": "Phone notifications",
+  "Mandar um teste": "Send a test",
+  "Notificações no celular desligadas.": "Phone notifications turned off.",
+  "Não foi possível ligar as notificações no celular: {0}": "Couldn't turn on phone notifications: {0}",
+  "Notificações no celular ligadas.": "Phone notifications turned on.",
+  "O teste não foi: {0}": "The test didn't go out: {0}",
+  "Teste mandado: a notificação chega em alguns segundos.": "Test sent: the notification arrives in a few seconds.",
+  "notificações no celular indisponíveis": "phone notifications unavailable",
+  "abra o Habblaud por http://localhost ou pelo acesso do celular": "open Habblaud at http://localhost or through the phone access",
+  "esperado {endpoint: string}": "expected {endpoint: string}",
+  "assinatura de push inválida ou de um serviço desconhecido": "invalid push subscription or unknown push service",
+  "o serviço de push recusou a mensagem ({0})": "the push service refused the message ({0})",
+  "Notificações no celular: um aparelho deixou de receber; a assinatura dele saiu da lista.": "Phone notifications: a device stopped receiving; its subscription was removed.",
+  "Notificações no celular: o serviço de push recusou a mensagem ({0}).": "Phone notifications: the push service refused the message ({0}).",
 };

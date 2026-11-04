@@ -52,6 +52,8 @@ export interface ApiDeps {
    * terminal e HABBLAUD_MENSAGENS); a trava do Host local é conferida aqui antes de chamá-las.
    */
   messages?: (req: IncomingMessage, res: ServerResponse, path: string) => void;
+  /** Notificações no celular (server/push/http.ts): a chave VAPID e as assinaturas dos aparelhos. */
+  push?: (req: IncomingMessage, res: ServerResponse, path: string) => void;
   /**
    * Terminal interativo e ações nos agentes (/api/pty/*, POST /api/agents/:id/stop|takeover; http/pty.ts).
    * Ausente = desligado (sem HABBLAUD_PTY=1, Docker, sem node-pty ou sem bind local).
@@ -630,6 +632,18 @@ export function createApiHandler(deps: ApiDeps): (req: IncomingMessage, res: Ser
           })
           .catch((err) => fail(res, err));
       }
+      return true;
+    }
+    if (path === '/api/push' || path.startsWith('/api/push/')) {
+      // Notificações no celular: quem assina é o próprio celular, pela porta dele (já com login, como todo /api ali), ou a
+      // página local. Não age sobre as sessões: só recebe os avisos que a página já mostra.
+      if (!deps.push) {
+        req.resume();
+        sendJson(res, 404, { error: tr('notificações no celular indisponíveis') });
+      } else if (!isRemote(req) && !isLoopbackHost(req.headers.host)) {
+        req.resume();
+        sendJson(res, 403, { error: tr('abra o Habblaud por http://localhost ou pelo acesso do celular') });
+      } else deps.push(req, res, path);
       return true;
     }
     if (isMessagesPath(path)) {

@@ -6,7 +6,7 @@ import { createAvatarPlaceholder, updateAvatar } from './avatar';
 import { CharacterEditor } from './character-editor';
 import { MessageComposer } from './composer';
 import type { UiComponent, UiContext } from './context';
-import { copyText, h, iconButton, KeyedList, setAttr, setHidden, setStyleVar, setText, setTitle, setVariant } from './dom';
+import { copyText, h, iconButton, KeyedList, PHONE_LAYOUT, phoneLayout, setAttr, setHidden, setStyleVar, setText, setTitle, setVariant } from './dom';
 import {
   formatClock,
   formatDateTime,
@@ -245,6 +245,12 @@ class AgentView {
   /** Mandar mensagem ao agente principal pelo Habblaud (plugin habblaud-mensagens). */
   private composer: MessageComposer;
   private msgSec: ReturnType<typeof section>;
+  /** Celular: rodapé da gaveta com a barra dos botões do cartão, presa enquanto o pedido existe (dockActions). */
+  private permBar: HTMLElement;
+  /** Celular, com um pedido no cartão: a caixa dobrada numa linha; tocar abre (styles.css, .ui-sec--msg.is-folded). */
+  private msgFold: HTMLButtonElement;
+  /** Pedido para o qual a caixa foi aberta pela linha dobrada (até o pedido mudar). */
+  private msgOpenFor = '';
   private tasksSec: ReturnType<typeof section>;
   private tasksBar: HTMLElement;
   private tasks: KeyedList<TaskItem>;
@@ -357,10 +363,30 @@ class AgentView {
     const nowSec = section(tr('Agora'), h('div', { class: 'ui-now' }, this.actIcon, h('div', { class: 'ui-now__body' }, this.actText, this.actTime)), this.actDetails);
     this.composer = new MessageComposer(ctx, 'drawer');
     this.msgSec = section(tr('Mandar mensagem'), this.composer.el);
-    // No celular a caixa fica presa no rodapé da gaveta enquanto a conversa rola (styles.css, .ui-sec--msg).
+    // No celular a caixa fica presa no rodapé da gaveta enquanto a conversa rola (styles.css, .ui-sec--msg). Com um
+    // pedido no cartão, quem fica no rodapé é a barra dos botões dele: a caixa dobra numa linha que abre ao toque.
     this.msgSec.el.classList.add('ui-sec--msg');
+    this.msgFold = h(
+      'button',
+      {
+        class: 'ui-msg__fold',
+        type: 'button',
+        attrs: { 'aria-expanded': 'false' },
+        on: {
+          click: () => {
+            this.msgOpenFor = this.perm.requestId;
+            this.ctx.invalidate();
+            requestAnimationFrame(() => this.composer.focus());
+          },
+        },
+      },
+      tr('Mandar mensagem'),
+    );
+    this.msgSec.el.prepend(this.msgFold);
     this.social = new SocialSection(ctx);
     this.perm = new PermissionCard(ctx);
+    this.permBar = h('div', { class: 'ui-perm-bar', hidden: true, role: 'group', attrs: { 'aria-label': tr('Responder ao pedido') } });
+    if (typeof matchMedia === 'function') matchMedia(PHONE_LAYOUT).addEventListener?.('change', () => ctx.invalidate());
 
     this.tasksBar = createProgress(tr('Progresso das tarefas'));
     const tasksList = h('ul', { class: 'ui-tasks' });
@@ -425,6 +451,7 @@ class AgentView {
       this.timelineSec.el,
       statsSec.el,
       this.codexHint,
+      this.permBar,
     );
   }
 
@@ -570,6 +597,7 @@ class AgentView {
     // Alerta.
     const waiting = a.status === 'waiting' && !!live;
     this.perm.render(live);
+    this.perm.dockActions(phoneLayout() ? this.permBar : null);
     setHidden(this.alert, !waiting || this.perm.visible);
     if (waiting) {
       const accName = account?.name ?? a.account;
@@ -617,6 +645,11 @@ class AgentView {
 
     // Mandar mensagem: só para principais presentes (com o recurso ligado e a página local; sem o plugin, a dica).
     setHidden(this.msgSec.el, this.composer.render(live, this.id) === 'off');
+    const pending = this.perm.visible ? this.perm.requestId : '';
+    const folded = !!pending && this.msgOpenFor !== pending;
+    this.msgSec.el.classList.toggle('is-folded', folded);
+    this.msgSec.el.classList.toggle('is-beside-card', !!pending);
+    setAttr(this.msgFold, 'aria-expanded', String(!folded));
 
     // Vida social (personalidade, carteira, rodas): só de quem está no escritório.
     if (live) this.social.render(a.id, now);

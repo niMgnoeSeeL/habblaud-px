@@ -9,6 +9,7 @@ import { computeCounters, shellLine, shellWaitIn, shellWaitingAgents, waitingAge
 import { TIMELAPSE_ICONS } from './timelapse';
 import { focusPermission, nextPermissionAgent, permissionAgents } from './permission';
 import { UsageCards } from './usage';
+import { MoreMenu } from './moremenu';
 import { VersionChip } from './version';
 import { wordmark } from './widgets';
 import { tr } from '../../../shared/i18n';
@@ -53,6 +54,8 @@ export class TopBar implements UiComponent {
   private readonly spawnPanel: SpawnPanel;
   /** Grupo dos botões de painéis (feed, Habblaud World, configurações, ajuda); o histórico entra aqui (ui/index.ts). */
   readonly panelGroup: HTMLElement;
+  /** ⋯ Mais opções: o que a largura da tela tira da barra (moremenu.ts). */
+  private more: MoreMenu;
 
   constructor(private ctx: UiContext) {
     // Marca: usa o logo do projeto se existir; senão, o prédio em pixels.
@@ -136,6 +139,16 @@ export class TopBar implements UiComponent {
       iconButton(ICONS.help, tr('Ajuda (?)'), () => ctx.openHelp()),
     );
     this.panelGroup = panelGroup;
+    // A visão geral e os painéis, na ordem da barra. Fora: o zoom (fica na pinça) e o feed (no celular ele tem a faixa
+    // no rodapé).
+    const overviewBtn = viewGroup.querySelector<HTMLElement>(':scope > button');
+    const barButtons = () => [
+      ...(overviewBtn ? [overviewBtn] : []),
+      ...[...panelGroup.querySelectorAll<HTMLElement>(':scope > button')].filter((b) => b !== this.feedBtn),
+    ];
+    this.more = new MoreMenu(barButtons);
+    panelGroup.append(this.more.button);
+    ctx.root.append(this.more.menu);
 
     this.el = h(
       'header',
@@ -175,6 +188,7 @@ export class TopBar implements UiComponent {
   render(): void {
     const { store } = this.ctx;
     const snap = store.snapshot;
+    this.more.sync();
 
     // Conexão.
     const conn = store.connection;

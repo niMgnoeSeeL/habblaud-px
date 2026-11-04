@@ -38,8 +38,16 @@ export function composerMode(agent: AgentInfo | undefined, env: ComposerEnv): Co
   return { kind: 'ready' };
 }
 
-/** Dica embaixo da caixa (gaveta): como a mensagem entra na sessão. */
-export function composerTip(provider: Provider = 'claude'): string {
+/**
+ * Dica embaixo da caixa (gaveta): como a mensagem entra na sessão. Na tela de toque (`touch`), sem a frase das
+ * teclas: lá o Enter quebra a linha e quem manda é o botão.
+ */
+export function composerTip(provider: Provider = 'claude', touch = false): string {
+  if (touch) {
+    return provider === 'codex'
+      ? tr('Entra na fila da sessão e vira o próximo prompt quando o Codex terminar o que está fazendo.')
+      : tr('Entra na sessão como se você tivesse digitado.');
+  }
   return provider === 'codex'
     ? tr('Entra na fila da sessão e vira o próximo prompt quando o Codex terminar o que está fazendo. Enter manda; Shift+Enter quebra a linha.')
     : tr('Entra na sessão como se você tivesse digitado. Enter manda; Shift+Enter quebra a linha.');
@@ -55,9 +63,12 @@ export function canSend(raw: string): boolean {
   return text.trim().length > 0 && text.length <= MESSAGE_MAX;
 }
 
-/** Enter manda; Shift+Enter (e Alt+Enter) quebram a linha; Enter compondo um acento (IME) não conta. */
-export function enterSends(e: Pick<KeyboardEvent, 'key' | 'shiftKey' | 'altKey' | 'isComposing'>): boolean {
-  return e.key === 'Enter' && !e.shiftKey && !e.altKey && !e.isComposing;
+/**
+ * Enter manda; Shift+Enter (e Alt+Enter) quebram a linha; Enter compondo um acento (IME) não conta. Na tela de
+ * toque (`touch`, o teclado do celular) o Enter só quebra a linha: quem manda é o botão Enviar.
+ */
+export function enterSends(e: Pick<KeyboardEvent, 'key' | 'shiftKey' | 'altKey' | 'isComposing'>, touch = false): boolean {
+  return !touch && e.key === 'Enter' && !e.shiftKey && !e.altKey && !e.isComposing;
 }
 
 /**

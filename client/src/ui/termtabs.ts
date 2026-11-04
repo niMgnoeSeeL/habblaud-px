@@ -5,11 +5,12 @@
 import type { AgentInfo } from '../../../shared/types';
 import type { UiContext } from './context';
 import { moveAgent, orderAgents } from './agentorder';
-import { h, KeyedList, setAttr, setHidden, setText, setTitle } from './dom';
+import { h, KeyedList, scrollCue, setAttr, setHidden, setText, setTitle } from './dom';
 import { activityFallback } from './model';
 import { ptyControllable, stopAgent } from './ptyapi';
 import { createStatusDot, updateStatusDot } from './widgets';
 import { tr } from '../../../shared/i18n';
+import { wireTouchReorder } from './touchreorder';
 
 /** Quanto tempo o X fica pedindo confirmação. */
 const CONFIRM_MS = 3000;
@@ -31,9 +32,13 @@ export class TermTabs {
   private confirmTimer: ReturnType<typeof setTimeout> | null = null;
   /** Aba sendo arrastada (id do agente). */
   private dragging: string | null = null;
+  /** Confere as pontas cortadas da fila depois de trocar as abas. */
+  private cue: () => void;
 
   constructor(private ctx: UiContext) {
     this.el = h('div', { class: 'ui-ttabs', role: 'tablist', hidden: true, attrs: { 'aria-label': tr('Agentes do projeto (arraste para reordenar)') } });
+    // Muitas abas: a fila rola e a ponta cortada esmaece (dom.ts, scrollCue).
+    this.cue = scrollCue(this.el);
     this.list = new KeyedList<AgentInfo>(this.el, {
       animate: false,
       key: (a) => a.id,
@@ -106,6 +111,7 @@ ${doing}` : ''}${live ? tr(' (interativo)') : ''}`);
     // Uma aba só não ajuda: some.
     setHidden(this.el, this.peers.length < 2);
     this.list.sync(this.peers.length < 2 ? [] : this.peers);
+    this.cue();
   }
 
   /** X da aba: o primeiro clique pede confirmação; o segundo encerra a sessão (aqui ou noutro terminal). */
@@ -172,6 +178,32 @@ ${doing}` : ''}${live ? tr(' (interativo)') : ''}`);
       if (!from || !to || from === to) return;
       this.move(from, to, this.isAfter(b, e.clientX));
     });
+    // No toque: segurar a aba e arrastar para os lados (touchreorder.ts).
+    wireTouchReorder(
+      b,
+      {
+        targets: () => [...this.el.querySelectorAll<HTMLElement>('.ui-ttab')],
+        start: () => {
+          this.dragging = b.dataset.id ?? null;
+          b.classList.add('is-dragging');
+        },
+        over: (t, after) => {
+          this.clearMarks();
+          t?.classList.add(after ? 'is-drop-after' : 'is-drop-before');
+        },
+        drop: (t, after) => {
+          const from = b.dataset.id;
+          const to = t.dataset.id;
+          if (from && to && from !== to) this.move(from, to, after);
+        },
+        end: () => {
+          this.dragging = null;
+          b.classList.remove('is-dragging');
+          this.clearMarks();
+        },
+      },
+      'x',
+    );
   }
 
   private isAfter(b: HTMLElement, x: number): boolean {

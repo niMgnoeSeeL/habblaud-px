@@ -25,7 +25,7 @@ import {
 } from './composer-model';
 import type { UiContext } from './context';
 import { DictationButton, dictationAvailable, insertDictation } from './dictation';
-import { h, setAttr, setHidden, setText, setTitle } from './dom';
+import { coarsePointer, h, setAttr, setHidden, setText, setTitle } from './dom';
 import { access } from '../net/access';
 import { tr } from '../../../shared/i18n';
 
@@ -74,7 +74,7 @@ export class MessageComposer {
     const term = variant === 'terminal';
     this.box = h('textarea', {
       class: `ui-msg__input${term ? ' ui-term__input' : ''}`,
-      attrs: { rows: 1, maxlength: MESSAGE_MAX, autocomplete: 'off', enterkeyhint: 'send' },
+      attrs: { rows: 1, maxlength: MESSAGE_MAX, autocomplete: 'off', enterkeyhint: coarsePointer() ? 'enter' : 'send' },
     });
     this.box.addEventListener('input', () => {
       this.drafts.set(this.agentId, this.box.value);
@@ -147,7 +147,10 @@ export class MessageComposer {
     }
     this.box.disabled = !ready;
     const name = agent?.name ?? tr('o agente');
-    const placeholder = ready ? (term ? tr('Mensagem para {0} (Enter manda, Shift+Enter quebra a linha)', [name]) : tr('Mensagem para {0}…', [name])) : mode.text;
+    // Tela de toque: o Enter quebra a linha (quem manda é o botão), então nada de falar das teclas.
+    const touch = coarsePointer();
+    setAttr(this.box, 'enterkeyhint', touch ? 'enter' : 'send');
+    const placeholder = ready ? (term && !touch ? tr('Mensagem para {0} (Enter manda, Shift+Enter quebra a linha)', [name]) : tr('Mensagem para {0}…', [name])) : mode.text;
     setAttr(this.box, 'placeholder', placeholder);
     setAttr(this.box, 'aria-label', ready ? tr('Mensagem para {0}', [name]) : mode.text);
     setTitle(this.box, ready ? '' : mode.text);
@@ -165,7 +168,7 @@ export class MessageComposer {
     setHidden(this.row, !term && !ready);
     if (this.tip) {
       setHidden(this.tip, !ready);
-      setText(this.tip, composerTip(this.provider));
+      setText(this.tip, composerTip(this.provider, touch));
     }
     setHidden(this.hint, term || mode.kind !== 'hint');
     setText(this.hint, mode.kind === 'hint' ? mode.text : '');
@@ -178,6 +181,11 @@ export class MessageComposer {
     this.status.classList.toggle('is-error', state?.phase === 'failed' || state?.phase === 'rejected');
     this.status.classList.toggle('is-ok', state?.phase === 'delivered');
     return mode.kind;
+  }
+
+  /** Põe o cursor na caixa (se ela está valendo). */
+  focus(): void {
+    if (!this.box.disabled) this.box.focus();
   }
 
   // ---------------------------------------------------------------- internos
@@ -194,7 +202,7 @@ export class MessageComposer {
       else this.box.blur();
       return;
     }
-    if (enterSends(e)) {
+    if (enterSends(e, coarsePointer())) {
       e.preventDefault();
       void this.send();
     }

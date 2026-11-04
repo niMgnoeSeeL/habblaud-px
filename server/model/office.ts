@@ -158,7 +158,7 @@ export interface CommitResult {
   notices: Notice[];
 }
 
-type NoticeKind = 'arrive' | 'room' | 'wait' | 'deliver' | 'done' | 'leave' | 'shell' | 'shellDone' | 'github' | 'character';
+export type NoticeKind = 'arrive' | 'room' | 'wait' | 'deliver' | 'done' | 'leave' | 'shell' | 'shellDone' | 'github' | 'character';
 
 /** Pergunta ainda sem resposta (o balão dela já diz que o agente espera você). */
 function isOpenQuestion(a: Activity | undefined): boolean {
@@ -203,6 +203,8 @@ export class Office {
   private pendingFeed: FeedItem[] = [];
   private pendingNotices: Notice[] = [];
   private noticeAt = new Map<string, number>();
+  /** Quem escuta cada aviso novo, com o tipo (as notificações no celular, server/push). */
+  private noticeListeners = new Set<(n: Notice, kind: NoticeKind) => void>();
   private listeners = new Set<() => void>();
   private rev = 0;
   private dirty = true;
@@ -1090,5 +1092,18 @@ export class Office {
     if (kind !== 'room') n.agentId = key;
     if (roomId) n.roomId = roomId;
     this.pendingNotices.push(n);
+    for (const cb of this.noticeListeners) {
+      try {
+        cb(n, kind);
+      } catch (err) {
+        console.error('[office] onNotice', err);
+      }
+    }
+  }
+
+  /** Cada aviso novo (o mesmo que vai à página, já sem repetições e fora do boot), com o tipo dele. */
+  onNotice(cb: (n: Notice, kind: NoticeKind) => void): () => void {
+    this.noticeListeners.add(cb);
+    return () => void this.noticeListeners.delete(cb);
   }
 }

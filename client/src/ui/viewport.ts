@@ -75,6 +75,30 @@ export function computeInsets(g: PanelGeometry, f: PanelFlags, gap = INSET_GAP):
   return { top: Math.round(t), right: Math.round(r), bottom: Math.round(b), left: Math.round(l) };
 }
 
+/**
+ * Base e altura livre dos avisos (px). A base fica acima do feed ou, no celular, acima da folha de detalhes de verdade:
+ * as margens do mundo encolhem quando falta espaço (shrinkPair), os avisos não, senão cobririam a folha. A altura é o
+ * que sobra até a barra do topo; o que não cabe inteiro fica escondido (ui/toasts.ts).
+ */
+export function toastSpace(g: PanelGeometry, f: PanelFlags, insBottom: number, corner: boolean, gap = INSET_GAP): { bottom: number; maxH: number } {
+  const sheet = f.drawer && g.drawerSheet ? g.vh - g.drawerTop + gap : 0;
+  const bottom = Math.round(corner ? g.feedMargin : Math.max(insBottom, sheet));
+  return { bottom, maxH: Math.max(0, Math.round(g.vh - bottom - (Math.max(0, g.topBottom) + gap))) };
+}
+
+/** Abaixo disto, a diferença entre a janela e o visualViewport é barra do navegador, não teclado. */
+export const KEYBOARD_MIN = 100;
+
+/**
+ * Quanto o teclado da tela cobre do rodapé (px): a parte da janela abaixo do visualViewport. Com zoom de pinça o
+ * visualViewport encolhe sem teclado, então nada.
+ */
+export function keyboardInset(innerH: number, vv: Pick<VisualViewport, 'height' | 'offsetTop' | 'scale'> | null | undefined): number {
+  if (!vv || Math.abs(vv.scale - 1) > 0.01) return 0;
+  const covered = Math.round(innerH - vv.height - vv.offsetTop);
+  return covered >= KEYBOARD_MIN ? covered : 0;
+}
+
 export function sameInsets(a: ViewInsets | null, b: ViewInsets): boolean {
   return !!a && Math.abs(a.top - b.top) < 1 && Math.abs(a.right - b.right) < 1 && Math.abs(a.bottom - b.bottom) < 1 && Math.abs(a.left - b.left) < 1;
 }
@@ -103,6 +127,8 @@ function isTyping(t: EventTarget | null): boolean {
 
 export class FreeArea {
   private applied: ViewInsets | null = null;
+  /** Altura do teclado da tela (px) em --kb. */
+  private keyboard = 0;
   private probe: HTMLElement;
   private probeFeedOpen: HTMLElement;
   private probeFeedClosed: HTMLElement;
@@ -134,6 +160,13 @@ export class FreeArea {
     panels.root.append(this.probe);
 
     addEventListener('resize', () => this.schedule());
+    // Teclado da tela (celular): a folha sobe acima dele (--kb em styles.css).
+    const vv = typeof visualViewport === 'object' ? visualViewport : null;
+    if (vv) {
+      const onKeyboard = () => this.syncKeyboard(vv);
+      vv.addEventListener('resize', onKeyboard);
+      vv.addEventListener('scroll', onKeyboard);
+    }
     // A largura/posição do feed anima ao abrir/fechar painéis: reposiciona os avisos no fim da transição.
     panels.feed.addEventListener('transitionend', (e) => {
       if (e.target === panels.feed) this.schedule();
@@ -180,7 +213,7 @@ export class FreeArea {
     const f = this.flags();
     const g = this.measure();
     const insets = computeInsets(g, { ...f, drawer: f.drawer && !this.guarding });
-    this.placeToasts(insets, g);
+    this.placeToasts(insets, g, f);
     if (sameInsets(this.applied, insets)) return;
     this.applied = insets;
     const s = this.panels.root.style;
@@ -200,18 +233,31 @@ export class FreeArea {
    * Avisos: no canto inferior direito, ao lado do feed, quando sobra espaço ali (fora do prédio enquadrado);
    * senão, logo acima do feed / da folha de detalhes. Sempre à esquerda da gaveta.
    */
-  private placeToasts(ins: ViewInsets, g: PanelGeometry): void {
+  private placeToasts(ins: ViewInsets, g0: PanelGeometry, f: PanelFlags): void {
     const feed = this.panels.feed;
+    // Para os avisos, a gaveta da largura da tela é folha mesmo colada na barra do topo (celular deitado), quando as
+    // margens do mundo já não a contam como folha.
+    const g = { ...g0, drawerSheet: g0.drawerSheet || this.panels.drawer.offsetWidth >= g0.vw - 40 };
     const right = Math.max(g.feedMargin, ins.right);
     const beside = g.vw - right - (feed.offsetLeft + feed.offsetWidth) - g.feedMargin;
     const corner = !g.drawerSheet && beside >= TOAST_MIN_W;
-    const bottom = corner ? g.feedMargin : ins.bottom;
+    const { bottom, maxH } = toastSpace(g, f, ins.bottom, corner);
     const width = corner ? Math.min(TOAST_W, beside) : Math.min(TOAST_W, Math.max(240, g.vw - right - Math.max(g.feedMargin, ins.left)));
-    const key = `${bottom}|${width}`;
+    const key = `${bottom}|${width}|${maxH}`;
     if (key === this.toastPlace) return;
     this.toastPlace = key;
     this.panels.root.style.setProperty('--toast-bottom', `${bottom}px`);
     this.panels.root.style.setProperty('--toast-w', `${Math.round(width)}px`);
+    this.panels.root.style.setProperty('--toast-max-h', `${maxH}px`);
+  }
+
+  /** Teclado da tela abriu, fechou ou mudou de altura: --kb e os avisos acompanham. */
+  private syncKeyboard(vv: VisualViewport): void {
+    const kb = keyboardInset(innerHeight, vv);
+    if (kb === this.keyboard) return;
+    this.keyboard = kb;
+    this.panels.root.style.setProperty('--kb', `${kb}px`);
+    this.schedule();
   }
 
   // ---------------------------------------------------------------- foco

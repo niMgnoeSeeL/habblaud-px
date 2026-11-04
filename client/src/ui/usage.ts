@@ -9,7 +9,7 @@
 // instalar para o uso: "Como funciona" abre a ajuda na seção do Codex. Sem Opus/Sonnet nem e-mail (só o plano).
 import type { AccountInfo } from '../../../shared/types';
 import type { UiContext } from './context';
-import { h, KeyedList, setAttr, setHidden, setStyleVar, setText, setTitle, setVariant } from './dom';
+import { h, KeyedList, scrollCue, setAttr, setHidden, setStyleVar, setText, setTitle, setVariant } from './dom';
 import { FIVE_HOURS_MS, relativeTime, usageLevel, usageWindowView, WEEK_MS, type UsageWindowView } from './format';
 import { ICONS } from './icons';
 import { isCodex } from './provider';
@@ -208,6 +208,8 @@ export class UsageCards {
 
   constructor(private ctx: UiContext) {
     this.el = h('div', { class: 'ui-usage', role: 'group', attrs: { 'aria-label': tr('Uso por conta') } });
+    // Celular: a fila rola quando os cartões não cabem; a ponta cortada esmaece.
+    this.cue = scrollCue(this.el);
     this.list = new KeyedList<AccountInfo>(this.el, {
       key: (a) => a.id,
       create: () => this.createCard(),
@@ -216,6 +218,9 @@ export class UsageCards {
     // A largura da janela mudou: refaz a conta de cabem-ou-não (ver fit()).
     if (typeof ResizeObserver === 'function') new ResizeObserver(() => this.fit()).observe(ctx.root);
   }
+
+  /** Confere as pontas cortadas da fila (dom.ts, scrollCue) depois de trocar os cartões. */
+  private cue: () => void;
 
   render(): void {
     const accounts = this.ctx.store.snapshot?.accounts ?? [];
@@ -228,6 +233,7 @@ export class UsageCards {
     if (key !== this.fitKey) {
       this.fitKey = key;
       this.fit();
+      this.cue();
     }
   }
 

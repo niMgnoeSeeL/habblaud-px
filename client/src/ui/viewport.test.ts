@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeInsets, INSET_GAP, MIN_FREE, sameInsets, sameSelection, type PanelGeometry } from './viewport';
+import { computeInsets, INSET_GAP, keyboardInset, KEYBOARD_MIN, MIN_FREE, sameInsets, sameSelection, toastSpace, type PanelGeometry } from './viewport';
 
 const desktop: PanelGeometry = {
   vw: 1440,
@@ -69,5 +69,43 @@ describe('comparações', () => {
     expect(sameSelection({ type: 'agent', id: 'a' }, { type: 'agent', id: 'a' })).toBe(true);
     expect(sameSelection({ type: 'agent', id: 'a' }, { type: 'room', id: 'a' })).toBe(false);
     expect(sameSelection({ type: 'agent', id: 'a' }, null)).toBe(false);
+  });
+});
+
+describe('toastSpace', () => {
+  // iPhone SE deitado: barra do topo de 108 px e a folha de detalhes começando em 127 px.
+  const phone: PanelGeometry = { ...desktop, vw: 568, vh: 320, topBottom: 108, drawerTop: 127, drawerSheet: true, feedClosedH: 38, feedMargin: 8 };
+  const flags = { sidebar: false, feed: false, drawer: true, narrow: true };
+
+  it('com a folha aberta, a base fica acima da folha de verdade, mesmo com as margens do mundo encolhidas', () => {
+    const shrunk = computeInsets(phone, flags).bottom;
+    const { bottom } = toastSpace(phone, flags, shrunk, false);
+    expect(bottom).toBe(phone.vh - phone.drawerTop + g);
+    expect(bottom).toBeGreaterThanOrEqual(shrunk);
+  });
+
+  it('a altura livre vai da base até a barra do topo; sem espaço, 0', () => {
+    // 3 px entre a barra do topo e a folha: nenhum aviso cabe (ui/toasts.ts esconde).
+    expect(toastSpace(phone, flags, 0, false).maxH).toBe(320 - (320 - 127 + g) - (108 + g));
+    expect(toastSpace({ ...phone, drawerTop: 100 }, flags, 0, false).maxH).toBe(0);
+    const roomy = { ...phone, vh: 900, drawerTop: 500 };
+    expect(toastSpace(roomy, flags, 0, false)).toEqual({ bottom: 900 - 500 + g, maxH: 900 - (900 - 500 + g) - (108 + g) });
+  });
+
+  it('no canto (desktop, ao lado do feed), a base é a margem do feed', () => {
+    expect(toastSpace(desktop, { sidebar: false, feed: false, drawer: false, narrow: false }, 0, true)).toEqual({ bottom: desktop.feedMargin, maxH: 900 - 10 - (64 + g) });
+  });
+});
+
+describe('keyboardInset', () => {
+  it('o teclado cobre a parte da janela abaixo do visualViewport', () => {
+    expect(keyboardInset(667, { height: 360, offsetTop: 0, scale: 1 })).toBe(307);
+    expect(keyboardInset(667, { height: 360, offsetTop: 40, scale: 1 })).toBe(267);
+  });
+
+  it('barra do navegador, zoom de pinça ou sem visualViewport: nada', () => {
+    expect(keyboardInset(667, { height: 667 - KEYBOARD_MIN + 1, offsetTop: 0, scale: 1 })).toBe(0);
+    expect(keyboardInset(667, { height: 300, offsetTop: 0, scale: 2 })).toBe(0);
+    expect(keyboardInset(667, null)).toBe(0);
   });
 });

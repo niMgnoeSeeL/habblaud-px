@@ -32,6 +32,8 @@ import { codexAccountOf } from './codex/http';
 import { createCodexQueueRunner, findCodexBin } from './messages/codex';
 import { createMessageRoutes } from './messages/http';
 import { MessageRegistry } from './messages/registry';
+import { createPushRoutes } from './push/http';
+import { PushService } from './push/service';
 import type { CodexLive } from './sources/codex/live';
 import { ClaudeWatcher } from './sources/watcher';
 import { discoverCodexDirs } from './sources/codex/accounts';
@@ -338,6 +340,12 @@ const ticker = setInterval(() => {
   }
 }, 250);
 
+// Notificações no celular (Web Push): os avisos que pedem você e os de fim de turno, com o Mac parado (server/push).
+const push = new PushService({ file: join(config.dataDir, 'push.json') });
+office.onNotice((n, kind) => {
+  if (kind === 'wait' || kind === 'done') void push.notice(n, kind).catch((err) => log.warnOnce('push-send', errMsg(err)));
+});
+
 const api = createApiHandler({
   renameRoom: (id, name) => {
     const path = office.roomPath(id);
@@ -358,6 +366,7 @@ const api = createApiHandler({
   timeline: createTimelineHandler({ dir: timelineDir, recording: !!timeline }),
   permissions: permissions ? createPermissionRoutes(permissions) : undefined,
   messages: messages ? createMessageRoutes(messages) : undefined,
+  push: createPushRoutes(push),
   pty: ptys ? createPtyRoutes(ptys) : undefined,
   spawn,
   attachments,

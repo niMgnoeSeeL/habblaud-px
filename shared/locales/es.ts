@@ -95,6 +95,8 @@ export const ES: Readonly<Record<string, string>> = {
   "Para mandar mensagens por aqui, abra o Habblaud por http://localhost (ou 127.0.0.1)": "Para enviar mensajes desde aquí, abre Habblaud en http://localhost (o 127.0.0.1)",
   "Entra na fila da sessão e vira o próximo prompt quando o Codex terminar o que está fazendo. Enter manda; Shift+Enter quebra a linha.": "Entra en la cola de la sesión y se vuelve el próximo prompt cuando Codex termine lo que está haciendo. Enter envía; Shift+Enter hace un salto de línea.",
   "Entra na sessão como se você tivesse digitado. Enter manda; Shift+Enter quebra a linha.": "Entra en la sesión como si lo hubieras escrito tú. Enter envía; Shift+Enter hace un salto de línea.",
+  "Entra na sessão como se você tivesse digitado.": "Entra en la sesión como si lo hubieras escrito tú.",
+  "Entra na fila da sessão e vira o próximo prompt quando o Codex terminar o que está fazendo.": "Entra en la cola de la sesión y se vuelve el próximo prompt cuando Codex termine lo que está haciendo.",
   "Enviando…": "Enviando…",
   "Na fila: entregando ao Codex…": "En cola: entregando a Codex…",
   "Na fila: esperando a sessão buscar a mensagem…": "En cola: esperando que la sesión recoja el mensaje…",
@@ -211,6 +213,7 @@ export const ES: Readonly<Record<string, string>> = {
   "só tokens": "solo tokens",
 
   // client/src/ui/drawer.ts
+  "Responder ao pedido": "Responder a la solicitud",
   "Copiado!": "¡Copiado!",
   "Não foi possível copiar": "No se pudo copiar",
   "concluída": "completada",
@@ -296,7 +299,11 @@ export const ES: Readonly<Record<string, string>> = {
   "Subagente": "Subagente",
   "Agente": "Agente",
 
+  // client/src/ui/moremenu.ts
+  "Mais opções": "Más opciones",
+
   // client/src/ui/feed.ts
+  "{0} em {1}": "{0} en {1}",
   "Eventos recentes": "Eventos recientes",
   "Os eventos dos agentes aparecem aqui assim que acontecem.": "Los eventos de los agentes aparecen aquí en cuanto ocurren.",
   "Feed de atividade": "Feed de actividad",
@@ -3274,4 +3281,27 @@ export const ES: Readonly<Record<string, string>> = {
   "Carimbo deixado na portaria: {0}": "Sello dejado en la recepción: {0}",
   "Entre no prédio ou chegue mais perto da porta para carimbar.": "Entra al edificio o acércate más a la puerta para sellar.",
   "O carimbo não foi deixado. Tente de novo.": "El sello no se dejó. Inténtalo de nuevo.",
+
+  // client/src/ui/push.ts, client/src/ui/settings.ts e server/push (notificações no celular)
+  "Este navegador não recebe notificações push.": "Este navegador no recibe notificaciones push.",
+  "Precisa do acesso do celular por HTTPS (npm run remote:setup).": "Necesita el acceso del celular por HTTPS (npm run remote:setup).",
+  "No iPhone: Compartilhar › Adicionar à Tela de Início, e abra o Habblaud por lá.": "En el iPhone: Compartir › Agregar a inicio, y abre Habblaud desde ahí.",
+  "Bloqueadas no aparelho: libere em Ajustes › Notificações › Habblaud.": "Bloqueadas en el dispositivo: permítelas en Ajustes › Notificaciones › Habblaud.",
+  "Avisa no celular quando alguém precisa de você ou termina o que estava fazendo, se o Mac estiver parado há 2 min.": "Avisa en el celular cuando alguien te necesita o termina lo que estaba haciendo, si el Mac lleva 2 min sin uso.",
+  "Notificações bloqueadas no aparelho.": "Notificaciones bloqueadas en el dispositivo.",
+  "este aparelho não está assinado": "este dispositivo no está suscrito",
+  "Notificações no celular": "Notificaciones en el celular",
+  "Mandar um teste": "Enviar una prueba",
+  "Notificações no celular desligadas.": "Notificaciones en el celular desactivadas.",
+  "Não foi possível ligar as notificações no celular: {0}": "No se pudieron activar las notificaciones en el celular: {0}",
+  "Notificações no celular ligadas.": "Notificaciones en el celular activadas.",
+  "O teste não foi: {0}": "La prueba no salió: {0}",
+  "Teste mandado: a notificação chega em alguns segundos.": "Prueba enviada: la notificación llega en unos segundos.",
+  "notificações no celular indisponíveis": "notificaciones en el celular no disponibles",
+  "abra o Habblaud por http://localhost ou pelo acesso do celular": "abre Habblaud por http://localhost o por el acceso del celular",
+  "esperado {endpoint: string}": "se esperaba {endpoint: string}",
+  "assinatura de push inválida ou de um serviço desconhecido": "suscripción push inválida o de un servicio desconocido",
+  "o serviço de push recusou a mensagem ({0})": "el servicio push rechazó el mensaje ({0})",
+  "Notificações no celular: um aparelho deixou de receber; a assinatura dele saiu da lista.": "Notificaciones en el celular: un dispositivo dejó de recibir; su suscripción salió de la lista.",
+  "Notificações no celular: o serviço de push recusou a mensagem ({0}).": "Notificaciones en el celular: el servicio push rechazó el mensaje ({0}).",
 };

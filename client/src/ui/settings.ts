@@ -5,6 +5,7 @@ import type { UiComponent, UiContext } from './context';
 import { h, iconButton, setAttr, setHidden, setText } from './dom';
 import { ICONS } from './icons';
 import { notificationState, type Notifier } from './notify';
+import { PushControl, pushHint } from './push';
 import type { UiPrefs } from './prefs';
 import { SoundSettingsGroup } from './settings-sound';
 import type { SoundControl } from './sound';
@@ -92,6 +93,11 @@ export class SettingsPopover implements UiComponent {
   private language: ReturnType<typeof segmented<LanguageChoice>>;
   private soundGroup: SoundSettingsGroup;
   private demoGroup: HTMLElement;
+  /** Notificações no celular (Web Push, ui/push.ts): só no acesso do celular. */
+  private push = new PushControl();
+  private pushSwitch: ReturnType<typeof switchRow>;
+  private pushTest: HTMLButtonElement;
+  private pushWrap: HTMLElement;
   /** Só na página do celular (porta remota com login): sair deste aparelho. */
   private remoteGroup: HTMLElement;
   private logoutBtn: HTMLButtonElement;
@@ -192,6 +198,9 @@ export class SettingsPopover implements UiComponent {
     this.about = new AboutGroup(ctx);
 
     const close = iconButton(ICONS.close, tr('Fechar configurações'), () => this.hide(), 'ui-icon-btn--sm');
+    this.pushSwitch = switchRow(tr('Notificações no celular'), pushHint('off'), () => void this.togglePush());
+    this.pushTest = h('button', { class: 'ui-btn ui-btn--sm ui-set__action', type: 'button', hidden: true, on: { click: () => void this.testPush() } }, tr('Mandar um teste'));
+    this.pushWrap = h('div', { class: 'ui-set-push', hidden: true }, this.pushSwitch.row, this.pushTest);
     this.el = h(
       'div',
       { class: 'ui-popover ui-settings', role: 'dialog', tabIndex: -1, attrs: { 'aria-label': tr('Configurações'), id: 'ui-settings', popover: 'auto' } },
@@ -211,6 +220,7 @@ export class SettingsPopover implements UiComponent {
         { class: 'ui-set-group' },
         h('h3', { text: tr('Avisos') }),
         sw('browserNotifications', tr('Notificações do navegador'), tr('Avisa quando alguém precisa de você e a aba está em segundo plano.'), () => void this.toggleNotifications()),
+        this.pushWrap,
       ),
       this.soundGroup.el,
       h('div', { class: 'ui-set-group' }, h('h3', { text: tr('Idioma') }), this.language.row),
@@ -236,13 +246,16 @@ export class SettingsPopover implements UiComponent {
   toggle(anchor: HTMLElement): void {
     this.anchor = anchor;
     if (this.isOpen) return this.hide();
-    const r = anchor.getBoundingClientRect();
+    // Aberto pelo ⋯ (celular), o botão de Configurações está fora da barra: o popover se alinha ao ⋯.
+    const shown = anchor.getClientRects().length ? anchor : (document.querySelector<HTMLElement>('.ui-btn-more') ?? anchor);
+    const r = shown.getBoundingClientRect();
     this.el.style.top = `${Math.round(r.bottom + 8)}px`;
     this.el.style.right = `${Math.max(8, Math.round(innerWidth - r.right - 4))}px`;
     if (typeof this.el.showPopover === 'function') this.el.showPopover();
     else this.el.classList.add('is-open');
     anchor.setAttribute('aria-expanded', 'true');
     this.syncRootClass();
+    if (access().remote) void this.push.refresh().then(() => this.render());
     // Leva o foco para dentro do popover (sem anel de foco num controle específico).
     this.el.focus();
   }
@@ -301,6 +314,46 @@ export class SettingsPopover implements UiComponent {
           : tr('Avisa quando alguém precisa de você e a aba está em segundo plano.');
     setText(notif.hint, hint);
     notif.btn.disabled = state === 'unsupported';
+
+    // No celular (acesso remoto): as notificações push, que chegam com o app fechado.
+    setHidden(this.pushWrap, !access().remote);
+    const push = this.push.state;
+    setAttr(this.pushSwitch.btn, 'aria-checked', String(push === 'on'));
+    this.pushSwitch.btn.disabled = this.push.busy || (push !== 'on' && push !== 'off');
+    setText(this.pushSwitch.hint, pushHint(push));
+    setHidden(this.pushTest, push !== 'on');
+    this.pushTest.disabled = this.push.busy;
+  }
+
+  private async togglePush(): Promise<void> {
+    if (this.push.busy) return;
+    this.push.busy = true;
+    this.render();
+    try {
+      if (this.push.state === 'on') {
+        await this.push.disable();
+        this.ctx.announce(tr('Notificações no celular desligadas.'));
+      } else {
+        const error = await this.push.enable();
+        this.ctx.announce(error ? tr('Não foi possível ligar as notificações no celular: {0}', [error]) : tr('Notificações no celular ligadas.'));
+      }
+    } finally {
+      this.push.busy = false;
+      this.render();
+    }
+  }
+
+  private async testPush(): Promise<void> {
+    if (this.push.busy) return;
+    this.push.busy = true;
+    this.render();
+    try {
+      const error = await this.push.test();
+      this.ctx.announce(error ? tr('O teste não foi: {0}', [error]) : tr('Teste mandado: a notificação chega em alguns segundos.'));
+    } finally {
+      this.push.busy = false;
+      this.render();
+    }
   }
 
   private async toggleNotifications(): Promise<void> {

@@ -32,6 +32,28 @@ export class Toasts implements UiComponent {
   constructor(private ctx: UiContext) {
     this.el = h('div', { class: 'ui-toasts', attrs: { 'aria-live': 'polite', 'aria-relevant': 'additions', 'aria-label': tr('Avisos') } });
     ctx.store.on('notice', (n) => this.push(n));
+    // A altura livre (--toast-max-h, ui/viewport.ts) muda com a folha, o feed e o teclado: a caixa muda de tamanho.
+    if (typeof ResizeObserver === 'function') new ResizeObserver(() => this.fit()).observe(this.el);
+  }
+
+  /**
+   * Só o que cabe inteiro na altura livre, do mais novo (embaixo) para o mais velho: o resto fica escondido até sobrar
+   * espaço. Sem lugar nem para o mais novo, nenhum aparece; o contador "precisam de você" da barra continua.
+   */
+  fit(): void {
+    const style = getComputedStyle(this.el);
+    const max = parseFloat(style.maxHeight);
+    const room = Number.isFinite(max) ? max : Infinity;
+    const gap = parseFloat(style.rowGap) || 0;
+    const items = [...this.el.children] as HTMLElement[];
+    for (const el of items) el.classList.remove('is-clipped');
+    let used = 0;
+    for (const el of items) {
+      const hgt = el.offsetHeight;
+      if (!hgt) continue;
+      used += (used ? gap : 0) + hgt;
+      if (used > room + 0.5) el.classList.add('is-clipped');
+    }
   }
 
   push(n: Notice): void {
@@ -59,6 +81,7 @@ export class Toasts implements UiComponent {
     const toast = this.create(n, key);
     this.toasts.push(toast);
     this.el.prepend(toast.el);
+    this.fit();
     this.arm(toast, LIFETIME[n.level]);
     while (this.toasts.length > MAX_VISIBLE) {
       const victim = this.toasts.find((t) => t.notice.level !== 'alert') ?? this.toasts[0];

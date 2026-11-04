@@ -95,6 +95,8 @@ export const FR: Readonly<Record<string, string>> = {
   "Para mandar mensagens por aqui, abra o Habblaud por http://localhost (ou 127.0.0.1)": "Pour envoyer des messages d'ici, ouvrez Habblaud via http://localhost (ou 127.0.0.1)",
   "Entra na fila da sessão e vira o próximo prompt quando o Codex terminar o que está fazendo. Enter manda; Shift+Enter quebra a linha.": "Entre dans la file de la session et devient le prochain prompt quand Codex aura fini ce qu'il fait. Entrée envoie ; Maj+Entrée va à la ligne.",
   "Entra na sessão como se você tivesse digitado. Enter manda; Shift+Enter quebra a linha.": "Entre dans la session comme si vous l'aviez tapé. Entrée envoie ; Maj+Entrée va à la ligne.",
+  "Entra na sessão como se você tivesse digitado.": "Entre dans la session comme si vous l'aviez tapé.",
+  "Entra na fila da sessão e vira o próximo prompt quando o Codex terminar o que está fazendo.": "Entre dans la file de la session et devient le prochain prompt quand Codex aura fini ce qu'il fait.",
   "Enviando…": "Envoi…",
   "Na fila: entregando ao Codex…": "En file : remise à Codex…",
   "Na fila: esperando a sessão buscar a mensagem…": "En file : la session doit récupérer le message…",
@@ -211,6 +213,7 @@ export const FR: Readonly<Record<string, string>> = {
   "só tokens": "tokens uniquement",
 
   // client/src/ui/drawer.ts
+  "Responder ao pedido": "Répondre à la demande",
   "Copiado!": "Copié !",
   "Não foi possível copiar": "Copie impossible",
   "concluída": "terminée",
@@ -289,7 +292,11 @@ export const FR: Readonly<Record<string, string>> = {
   "Subagente": "Sous-agent",
   "Agente": "Agent",
 
+  // client/src/ui/moremenu.ts
+  "Mais opções": "Plus d'options",
+
   // client/src/ui/feed.ts
+  "{0} em {1}": "{0} dans {1}",
   "Eventos recentes": "Événements récents",
   "Os eventos dos agentes aparecem aqui assim que acontecem.": "Les événements des agents apparaissent ici dès qu'ils se produisent.",
   "Feed de atividade": "Fil d'activité",
@@ -3290,4 +3297,27 @@ export const FR: Readonly<Record<string, string>> = {
   "Carimbo deixado na portaria: {0}": "Tampon laissé à l'accueil : {0}",
   "Entre no prédio ou chegue mais perto da porta para carimbar.": "Entrez dans l'immeuble ou approchez-vous de la porte pour tamponner.",
   "O carimbo não foi deixado. Tente de novo.": "Le tampon n'a pas été laissé. Réessayez.",
+
+  // client/src/ui/push.ts, client/src/ui/settings.ts e server/push (notificações no celular)
+  "Este navegador não recebe notificações push.": "Ce navigateur ne reçoit pas les notifications push.",
+  "Precisa do acesso do celular por HTTPS (npm run remote:setup).": "Nécessite l'accès mobile en HTTPS (npm run remote:setup).",
+  "No iPhone: Compartilhar › Adicionar à Tela de Início, e abra o Habblaud por lá.": "Sur iPhone : Partager › Sur l'écran d'accueil, puis ouvrez Habblaud depuis là.",
+  "Bloqueadas no aparelho: libere em Ajustes › Notificações › Habblaud.": "Bloquées sur l'appareil : autorisez-les dans Réglages › Notifications › Habblaud.",
+  "Avisa no celular quando alguém precisa de você ou termina o que estava fazendo, se o Mac estiver parado há 2 min.": "Prévient le téléphone quand quelqu'un a besoin de vous ou termine ce qu'il faisait, si le Mac est inactif depuis 2 min.",
+  "Notificações bloqueadas no aparelho.": "Notifications bloquées sur l'appareil.",
+  "este aparelho não está assinado": "cet appareil n'est pas abonné",
+  "Notificações no celular": "Notifications sur le téléphone",
+  "Mandar um teste": "Envoyer un test",
+  "Notificações no celular desligadas.": "Notifications sur le téléphone désactivées.",
+  "Não foi possível ligar as notificações no celular: {0}": "Impossible d'activer les notifications sur le téléphone : {0}",
+  "Notificações no celular ligadas.": "Notifications sur le téléphone activées.",
+  "O teste não foi: {0}": "Le test n'est pas parti : {0}",
+  "Teste mandado: a notificação chega em alguns segundos.": "Test envoyé : la notification arrive dans quelques secondes.",
+  "notificações no celular indisponíveis": "notifications sur le téléphone indisponibles",
+  "abra o Habblaud por http://localhost ou pelo acesso do celular": "ouvrez Habblaud via http://localhost ou par l'accès mobile",
+  "esperado {endpoint: string}": "attendu {endpoint: string}",
+  "assinatura de push inválida ou de um serviço desconhecido": "abonnement push invalide ou service inconnu",
+  "o serviço de push recusou a mensagem ({0})": "le service push a refusé le message ({0})",
+  "Notificações no celular: um aparelho deixou de receber; a assinatura dele saiu da lista.": "Notifications sur le téléphone : un appareil ne reçoit plus ; son abonnement a été retiré.",
+  "Notificações no celular: o serviço de push recusou a mensagem ({0}).": "Notifications sur le téléphone : le service push a refusé le message ({0}).",
 };

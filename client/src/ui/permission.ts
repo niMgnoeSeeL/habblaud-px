@@ -10,7 +10,7 @@ import { access, isLoopbackHostname } from '../net/access';
 import { ANSWER_OTHER_MAX, ASK_TOOL, checkAnswers } from '../../../shared/answers';
 import type { AgentInfo, AskQuestion, PermissionAnswer, PermissionDecision, PermissionRequestInfo, PermissionSuggestionInfo } from '../../../shared/types';
 import type { UiContext } from './context';
-import { h, KeyedList, setAttr, setHidden, setText, setTitle } from './dom';
+import { h, KeyedList, prefersReducedMotion, setAttr, setHidden, setText, setTitle } from './dom';
 import { formatClock, formatDuration } from './format';
 import { ICONS } from './icons';
 import { diffLineKind, moreLabel, previewText, showToolInput, splitToolTitle } from './terminal';
@@ -217,6 +217,8 @@ export class PermissionCard {
   private opts: PermissionOptions = { always: false, interrupt: true, reasonRequired: false, seconds: false, note: '' };
   private status: HTMLElement;
   private remote: HTMLElement;
+  /** A barra dos botões (no cartão ou, no celular, no rodapé da gaveta: dockActions). */
+  private actions: HTMLElement;
   /** Perguntas do AskUserQuestion, montadas uma vez por pedido (a seleção sobrevive aos snapshots). */
   private askForm: HTMLFormElement;
   private askId = '';
@@ -289,6 +291,7 @@ export class PermissionCard {
     });
 
     this.status = h('p', { class: 'ui-perm__status', role: 'status', attrs: { 'aria-live': 'polite' } });
+    this.actions = h('div', { class: 'ui-perm__actions' }, this.approveBtn, this.answerBtn, this.denyBtn, this.terminalBtn);
     this.el = h(
       'section',
       { class: 'ui-perm', hidden: true, tabIndex: -1 },
@@ -299,7 +302,7 @@ export class PermissionCard {
       this.note,
       this.queue,
       this.remote,
-      h('div', { class: 'ui-perm__actions' }, this.approveBtn, this.answerBtn, this.denyBtn, this.terminalBtn),
+      this.actions,
       this.always,
       this.denyForm,
       this.status,
@@ -313,6 +316,24 @@ export class PermissionCard {
   /** O cartão está à mostra (há pedido para este agente). */
   get visible(): boolean {
     return !this.el.hidden;
+  }
+
+  /**
+   * Celular: a barra dos botões (aprovar, recusar, responder no terminal) vai para o rodapé da gaveta (`bar`, fora do
+   * cartão), onde fica presa enquanto o pedido existe; null a devolve ao cartão. Com o formulário da recusa aberto ela
+   * também volta: quem fica no rodapé é a barra do formulário.
+   */
+  dockActions(bar: HTMLElement | null): void {
+    const target = bar && this.visible && this.phase !== 'deny' ? bar : null;
+    if (target) {
+      if (this.actions.parentElement !== target) target.append(this.actions);
+    } else if (this.actions.parentElement !== this.el) this.el.insertBefore(this.actions, this.always);
+    if (bar) setHidden(bar, this.actions.parentElement !== bar);
+  }
+
+  /** Id do pedido à mostra ('' sem pedido). */
+  get requestId(): string {
+    return this.id;
   }
 
   render(agent: AgentInfo | undefined): void {
@@ -401,6 +422,8 @@ export class PermissionCard {
     this.syncDeny();
     setAttr(this.denyBtn, 'aria-expanded', String(this.phase === 'deny'));
     this.denyBtn.classList.toggle('is-on', this.phase === 'deny');
+    // Celular: com o formulário da recusa aberto, a barra presa no rodapé passa a ser a dele (styles.css).
+    this.el.classList.toggle('is-denying', this.phase === 'deny');
 
     if (this.pendingFocus === agent.id) {
       this.pendingFocus = null;
@@ -450,8 +473,13 @@ export class PermissionCard {
     if (this.phase === 'sending' || this.phase === 'sent') return;
     this.phase = open ? 'deny' : 'idle';
     this.ctx.invalidate();
-    if (open) requestAnimationFrame(() => this.reason.focus());
-    else this.denyBtn.focus();
+    if (open) {
+      // O motivo e os botões da recusa entram inteiros na tela (no celular ficam abaixo da dobra).
+      requestAnimationFrame(() => {
+        this.reason.focus({ preventScroll: true });
+        this.denyForm.scrollIntoView({ block: 'nearest', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+      });
+    } else this.denyBtn.focus();
   }
 
   private async send(d: PermissionDecision): Promise<void> {

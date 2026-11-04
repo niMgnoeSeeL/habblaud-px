@@ -12,11 +12,35 @@ do meio (0.**3**.0).
 
 ### Adicionado
 
+- **Celular: notificações push.** Em Configurações › Avisos › Notificações no celular (no acesso do celular), o
+  Habblaud avisa no celular quando alguém precisa de você ou termina o que estava fazendo, com o app fechado, se o
+  Mac estiver parado há 2 minutos (no Docker, sempre). Tocar na notificação abre o agente. No iPhone, só no app da
+  Tela de Início (iOS 16.4 ou mais novo). A mensagem vai cifrada pelo serviço de push do aparelho (no iPhone, o da
+  Apple), que não lê o conteúdo; "Mandar um teste" confere a entrega.
+- **Celular: menu ⋯ na barra do topo.** O que não cabe na barra do celular (visão geral, Meu dia, histórico,
+  timelapse, configurações e ajuda) fica no ⋯. Antes, o timelapse só abria pela tecla L.
+- **Celular: segurar e arrastar para reordenar** salas, agentes e as abas do terminal, como o arrastar com o mouse.
 - **Mod: idioma da linha embaixo do prompt e do /habblaud.** A opção `language` do plugin habblaud escolhe inglês
   (`en`, o padrão), coreano (`ko`) ou português (`pt-BR`); antes era sempre português.
 
 ### Corrigido
 
+- **Celular: responder um pedido ficou ao alcance do dedo.** Os botões do pedido (aprovar, recusar, responder no
+  terminal) ficam presos no rodapé da gaveta enquanto o pedido existe, sem a caixa de mensagem por cima (ela dobra
+  numa linha que abre ao toque); recusar rola até o motivo; a cabeça do cartão quebra a linha em vez de espremer o
+  título palavra por palavra.
+- **Celular: folhas opacas e avisos no lugar certo.** Gaveta, barra lateral, feed, diálogos e popovers não deixam
+  mais o escritório aparecer por trás. Os avisos ficam só no espaço livre entre a barra do topo e a folha: não
+  cobrem mais a folha nem entram embaixo da barra (sem espaço, esperam a folha fechar). Abrir uma folha fecha a
+  outra.
+- **Celular: o Enter do teclado quebra a linha** na caixa de mensagem; quem manda é o botão Enviar. A dica das teclas
+  não aparece mais no toque.
+- **Celular: com o teclado da tela aberto, a gaveta sobe acima dele.**
+- **Celular deitado:** as mesmas regras do celular em pé, e a visão geral volta à barra entre 601 e 760 px de largura
+  no toque (lá não há a tecla O).
+- **Celular: alvos de toque de 44 px** e, em 320 px, os cartões de uso não se espremem mais um sobre o outro: a fila
+  rola, com a ponta cortada esmaecida (as abas do terminal também).
+- **Feed: o "em" do título de cada evento agora é traduzido** (aparecia em português nas outras línguas).
 - **Habblaud World: o prédio volta a se conectar sozinho depois de o computador dormir ou de a rede cair.** Uma
   tentativa de reconexão que falhava antes de abrir (sem rede, como ao acordar o notebook) deixava o prédio apagado
   até reiniciar o Habblaud, sem novas tentativas nem aviso no log: no Node 22 essa conexão nunca avisa que fechou.

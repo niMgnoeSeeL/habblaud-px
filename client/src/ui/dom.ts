@@ -79,6 +79,34 @@ export function prefersReducedMotion(): boolean {
   return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
+/**
+ * Fila que rola na horizontal: marca as pontas cortadas (is-cut-start / is-cut-end) para o CSS esmaecer o lado onde há
+ * mais. Acompanha a rolagem e o tamanho da fila; devolve a função de conferir (para quem troca o conteúdo chamar).
+ */
+export function scrollCue(el: HTMLElement): () => void {
+  const sync = () => {
+    const max = el.scrollWidth - el.clientWidth;
+    el.classList.toggle('is-cut-start', max > 1 && el.scrollLeft > 1);
+    el.classList.toggle('is-cut-end', max > 1 && el.scrollLeft < max - 1);
+  };
+  el.addEventListener('scroll', sync, { passive: true });
+  if (typeof ResizeObserver === 'function') new ResizeObserver(sync).observe(el);
+  sync();
+  return sync;
+}
+
+/** O leiaute de celular de styles.css: em pé (até 600 px) ou deitado (pouca altura, toque). */
+export const PHONE_LAYOUT = '(max-width: 600px), (max-height: 500px) and (pointer: coarse)';
+
+export function phoneLayout(): boolean {
+  return typeof matchMedia === 'function' && matchMedia(PHONE_LAYOUT).matches;
+}
+
+/** Tela de toque como apontador principal (celular, tablet): sem teclado físico nem mouse. */
+export function coarsePointer(): boolean {
+  return typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+}
+
 /** Anima a saída (fade + colapso de altura) e remove o elemento. */
 export function animateOut(el: HTMLElement, done: () => void, ms = 260): void {
   if (prefersReducedMotion() || typeof el.animate !== 'function' || !el.isConnected) {

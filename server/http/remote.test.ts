@@ -166,6 +166,7 @@ interface Harness {
   permissionCalls: string[];
   ptyCalls: string[];
   worldCalls: string[];
+  pushCalls: string[];
   spawn: SpawnService;
   close: () => Promise<void>;
 }
@@ -199,6 +200,7 @@ async function start(allow: RemoteFeature[] = ['permissions']): Promise<Harness>
   const permissionCalls: string[] = [];
   const ptyCalls: string[] = [];
   const worldCalls: string[] = [];
+  const pushCalls: string[] = [];
   const spawn = new SpawnService();
   const api = createApiHandler({
     office,
@@ -228,6 +230,11 @@ async function start(allow: RemoteFeature[] = ['permissions']): Promise<Harness>
     world: (req, res, url) => {
       req.resume();
       worldCalls.push(`${req.method} ${url.pathname}`);
+      sendJson(res, 200, { ok: true });
+    },
+    push: (req, res, path) => {
+      req.resume();
+      pushCalls.push(`${isRemoteRequest(req) ? 'remote' : 'local'} ${req.method} ${path}`);
       sendJson(res, 200, { ok: true });
     },
   });
@@ -264,6 +271,7 @@ async function start(allow: RemoteFeature[] = ['permissions']): Promise<Harness>
     permissionCalls,
     ptyCalls,
     worldCalls,
+    pushCalls,
     spawn,
     close,
   };
@@ -383,6 +391,19 @@ describe('porta remota', () => {
     expect((await request(s.localBase, '/api/world/status', { headers: { Host: '192.168.0.10:4747' } })).status).toBe(403);
     expect(s.worldCalls).toEqual(['GET /api/world/status']);
     expect(JSON.parse((await request(s.localBase, '/api/access')).body).world).toBe(true);
+  });
+
+  it('notificações no celular: pela porta do celular só com login (sem HABBLAUD_REMOTE_ALLOW); na local, com Host local', async () => {
+    const s = await start([]);
+    expect((await request(s.remoteBase, '/api/push')).status).toBe(401);
+    expect((await request(s.remoteBase, '/api/push/subscribe', { method: 'POST', body: {} })).status).toBe(401);
+    expect(s.pushCalls).toEqual([]);
+    const headers = { cookie: await login(s.remoteBase) };
+    expect((await request(s.remoteBase, '/api/push', { headers })).status).toBe(200);
+    expect((await request(s.remoteBase, '/api/push/subscribe', { method: 'POST', headers, body: {} })).status).toBe(200);
+    expect((await request(s.localBase, '/api/push')).status).toBe(200);
+    expect((await request(s.localBase, '/api/push', { headers: { Host: '192.168.0.10:4747' } })).status).toBe(403);
+    expect(s.pushCalls).toEqual(['remote GET /api/push', 'remote POST /api/push/subscribe', 'local GET /api/push']);
   });
 
   it('novo agente: só com spawn liberado no celular; o auxiliar do host nunca pela porta remota', async () => {

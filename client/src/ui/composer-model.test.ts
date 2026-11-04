@@ -88,6 +88,13 @@ describe('caixa de mensagem (peças puras)', () => {
     expect(k({ key: 'a' })).toBe(false);
   });
 
+  it('tela de toque: o Enter só quebra a linha (manda o botão) e a dica não fala das teclas', () => {
+    expect(enterSends({ key: 'Enter', shiftKey: false, altKey: false, isComposing: false }, true)).toBe(false);
+    expect(composerTip('claude', true)).toBe('Entra na sessão como se você tivesse digitado.');
+    expect(composerTip('codex', true)).toBe('Entra na fila da sessão e vira o próximo prompt quando o Codex terminar o que está fazendo.');
+    expect(composerTip('claude', true)).not.toMatch(/Enter/);
+  });
+
   it('linha de situação: enviando, na fila, entregando, entregue (some depois de um tempo) e os erros', () => {
     expect(sendStatusText(undefined, 0)).toBe('');
     expect(sendStatusText({ phase: 'sending', at: 0 }, 0)).toBe('Enviando…');

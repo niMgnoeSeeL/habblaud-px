@@ -285,6 +285,11 @@ Install a certificate › CA certificate), checking the fingerprint the setup sh
   `ggml-base.bin`; the `.en` ones only understand English). Without them, the Dictate button doesn't show up. The
   voice never leaves the computer. `HABBLAUD_WHISPER_BIN`, `HABBLAUD_FFMPEG_BIN`, `HABBLAUD_WHISPER_MODEL` and
   `HABBLAUD_DICTATION_LANGS` (default `pt,en`) adjust it.
+- **Notifications (push):** in **Settings › Alerts › Phone notifications** (on the phone access), the phone gets a
+  notification when someone needs you or finishes what it was doing, even with the app closed, if the Mac has been
+  idle for 2 minutes (in Docker, always). Tapping it opens that agent. On iPhone it only works in the Home Screen app
+  (iOS 16.4 or newer). The message goes encrypted through the device's push service (Apple's, on iPhone), which can't
+  read it; the keys and the subscriptions live in `~/.habblaud/push.json` (mode 600).
 - **Away from home (Tailscale):** with Tailscale on the computer and on the phone, `tailscale serve --bg --https=443
   https+insecure://127.0.0.1:443` publishes the remote port (with login) only to your devices, with a valid
   certificate at `https://<computador>.<tailnet>.ts.net`; add that name to `HABBLAUD_ALLOWED_HOSTS`. Always point it at
@@ -903,6 +908,7 @@ mod/      o mod do Habblaud e os plugins de permissões e de mensagens (plugins 
 | `/api/messages…` and `/api/mod/inbox…` | Sending messages: the page puts the message in the queue and follows its delivery; the `habblaud-mensagens` plugin fetches it, delivers it to the session and confirms. Local access only. |
 | `POST /api/codex/events` | Events from the Codex hooks (session opened, tool, approval, end of turn). Local access only. |
 | `/api/codex/bridge/poll` and `/ack` | `npm run codex:bridge` fetches the messages for Codex and confirms delivery. Local access only. |
+| `/api/push`, `/api/push/subscribe`, `/unsubscribe`, `/status` and `/test` | Phone notifications (Web Push): the VAPID key and this device's subscription. Local access, or the phone with login. |
 
 More server details in [`server/README.md`](server/README.md).
 
