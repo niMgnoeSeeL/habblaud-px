@@ -10,6 +10,14 @@ do meio (0.**3**.0).
 
 ## [Não lançado]
 
+### Corrigido
+
+- **Habblaud World: o prédio volta a se conectar sozinho depois de o computador dormir ou de a rede cair.** Uma
+  tentativa de reconexão que falhava antes de abrir (sem rede, como ao acordar o notebook) deixava o prédio apagado
+  até reiniciar o Habblaud, sem novas tentativas nem aviso no log: no Node 22 essa conexão nunca avisa que fechou.
+  Agora a conexão com erro, sem `welcome` no prazo ou sem resposta ao ping conta como queda na hora, e a reconexão
+  segue com a espera de sempre.
+
 ## [1.0.3] - 2026-10-16
 
 ### Corrigido

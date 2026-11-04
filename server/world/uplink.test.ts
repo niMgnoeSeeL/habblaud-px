@@ -3,6 +3,7 @@
 // `ping`, a reconexão, cada `goodbye`, a pausa que fecha antes de responder e a última remessa em disco (600).
 import { randomBytes } from 'node:crypto';
 import { existsSync, readFileSync, statSync } from 'node:fs';
+import { createServer, type AddressInfo } from 'node:net';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { hash32 } from '../../shared/hash';
@@ -16,7 +17,8 @@ import { setQuiet } from '../log';
 import { startFakeWorld, type FakeWorld } from '../test/fake-world';
 import { tempDir } from '../test/fixtures';
 import { WorldSettingsStore } from './settings';
-import { backoffDelay, BuildingUplink, type UplinkTimers, type UplinkTiming } from './uplink';
+import { resolveWorldTheme } from './theme';
+import { backoffDelay, BuildingUplink, type SocketFactory, type SocketLike, type UplinkTimers, type UplinkTiming } from './uplink';
 
 setQuiet(true);
 
@@ -107,6 +109,42 @@ class ManualClock {
   }
 }
 
+/**
+ * O WebSocket do Node 22 (undici) nos casos em que o `close` nunca vem: a conexão que falha antes de abrir (rede fora,
+ * DNS, recusa) só dispara `error` e continua em CONNECTING, e o `close()` pedido daqui não termina (nada responde).
+ */
+class NoCloseSocket implements SocketLike {
+  readyState = 0;
+  onopen: SocketLike['onopen'] = null;
+  onmessage: SocketLike['onmessage'] = null;
+  onclose: SocketLike['onclose'] = null;
+  onerror: SocketLike['onerror'] = null;
+  /** Cada `close(code, reason)` pedido pelo uplink. */
+  readonly closes: Array<[number | undefined, string | undefined]> = [];
+  send(): void {}
+  close(code?: number, reason?: string): void {
+    this.closes.push([code, reason]);
+    this.readyState = 2;
+  }
+  addEventListener(): void {}
+  /** A conexão falhou antes de abrir: só o erro. */
+  fail(): void {
+    this.onerror?.({});
+  }
+}
+
+function noCloseSockets(): { sockets: NoCloseSocket[]; socket: SocketFactory } {
+  const sockets: NoCloseSocket[] = [];
+  return {
+    sockets,
+    socket: () => {
+      const s = new NoCloseSocket();
+      sockets.push(s);
+      return s;
+    },
+  };
+}
+
 interface Harness {
   world: FakeWorld;
   store: WorldSettingsStore;
@@ -134,6 +172,8 @@ async function start(
     /** O tempo do uplink num relógio manual (com `timing` por cima do FAST). */
     clock?: ManualClock;
     timing?: Partial<UplinkTiming>;
+    /** Outro WebSocket no lugar do de verdade (que fala com o mundo de mentira). */
+    socket?: SocketFactory;
   } = {},
 ): Promise<Harness> {
   const world = await startFakeWorld();
@@ -193,6 +233,7 @@ async function start(
       },
       timing: { ...FAST, ...opts.timing },
       ...(opts.clock ? { now: opts.clock.now, timers: opts.clock.timers } : {}),
+      ...(opts.socket ? { socket: opts.socket } : {}),
       random: () => 0.5,
     });
     closers.push(() => u.stop());
@@ -388,6 +429,75 @@ describe('BuildingUplink: conexão e remessas', () => {
     expect(h.world.ws.uplinks).toHaveLength(0);
   });
 
+  // Uma conexão que o uplink larga não pode depender do `close` dela para reconectar: no Node 22 ele não vem quando a
+  // conexão falha antes de abrir, nem quando o `close()` pedido daqui fica sem resposta (servidor mudo, rede morta).
+  it('falhou antes de abrir só com o erro, sem close: tenta de novo', async () => {
+    const clock = new ManualClock();
+    const { sockets, socket } = noCloseSockets();
+    await start({ clock, socket });
+    expect(sockets).toHaveLength(1);
+    sockets[0].fail();
+    clock.advance(FAST.backoffMaxMs!);
+    expect(sockets).toHaveLength(2);
+    // O que ainda vier da conexão largada não conta.
+    sockets[0].fail();
+    sockets[0].onclose?.({});
+    clock.advance(FAST.backoffMaxMs!);
+    expect(sockets).toHaveLength(2);
+  });
+
+  it('servidor fora do ar (porta recusada, com o WebSocket do Node): tenta de novo', async () => {
+    const clock = new ManualClock();
+    const port = await new Promise<number>((ok) => {
+      const s = createServer().listen(0, '127.0.0.1', () => {
+        const p = (s.address() as AddressInfo).port;
+        s.close(() => ok(p));
+      });
+    });
+    let attempts = 0;
+    await start({
+      clock,
+      socket: () => {
+        attempts++;
+        return new WebSocket(`ws://127.0.0.1:${port}/v1/socket`) as unknown as SocketLike;
+      },
+    });
+    await waitFor(() => {
+      clock.advance(FAST.backoffMaxMs!);
+      return attempts >= 3;
+    }, 'novas tentativas');
+  });
+
+  it('sem welcome no prazo e sem close de volta: larga a conexão e tenta de novo', async () => {
+    const clock = new ManualClock();
+    const { sockets, socket } = noCloseSockets();
+    await start({ clock, socket });
+    clock.advance(FAST.welcomeTimeoutMs!);
+    expect(sockets[0].closes).toEqual([[4000, 'welcome']]);
+    clock.advance(FAST.backoffMaxMs!);
+    expect(sockets).toHaveLength(2);
+  });
+
+  it('sem resposta ao ping e com o servidor mudo ao close: reconecta sem esperar o close', async () => {
+    const clock = new ManualClock();
+    const h = await start({ clock });
+    h.world.ws.options.pong = false;
+    h.world.ws.options.answerClose = false;
+    await waitFor(() => h.uplink.status().connected, 'welcome');
+    clock.advance(0);
+    await waitFor(() => h.world.ws.uplinks.length === 1 && !!h.uplink.status().lastAck, 'primeira e o ack');
+    clock.advance(3 * FAST.pingMs!);
+    expect(h.uplink.status().connected).toBe(false);
+    clock.advance(FAST.backoffMaxMs!);
+    await waitFor(() => h.uplink.status().connected, 'reconectou');
+    clock.advance(FAST.minGapMs!);
+    await waitFor(() => h.world.ws.uplinks.length === 2, 'pacote inteiro de novo');
+    expect(h.world.ws.uplinks[1].conn).toBe(2);
+    // A primeira conexão segue pendurada no servidor (o close nunca terminou), e nada mais sai por ela.
+    expect(h.world.ws.connections[0].open).toBe(true);
+    expect(h.world.ws.connections[0].messages.filter((m) => m.t === 'uplink')).toHaveLength(1);
+  });
+
   it('ack com erro: lastAck com o código; código desconhecido vira internal', async () => {
     const h = await start({ start: false });
     h.world.ws.options.ack = 'name_pool';
@@ -405,10 +515,12 @@ describe('BuildingUplink: conexão e remessas', () => {
     const h = await start({ tokensVisible: false });
     await waitFor(() => h.world.ws.uplinks.length === 1, 'primeira');
     expect(h.world.ws.uplinks[0].uplink.tokens).toBeUndefined();
-    h.store.setTheme('christmas');
+    // Um tema diferente do automático de hoje (de 1º de novembro a 26 de dezembro o automático já é o Natal).
+    const theme = resolveWorldTheme('auto', new Date()) === 'christmas' ? 'halloween' : 'christmas';
+    h.store.setTheme(theme);
     h.uplink.themeChanged();
     await waitFor(() => h.world.ws.uplinks.length === 2, 'tema');
-    expect(h.world.ws.uplinks[1].uplink.theme).toBe('christmas');
+    expect(h.world.ws.uplinks[1].uplink.theme).toBe(theme);
   });
 
   it('welcome.building: andares e agentes do mundo até a primeira remessa daqui', async () => {

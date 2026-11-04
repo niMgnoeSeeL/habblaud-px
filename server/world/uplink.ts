@@ -28,6 +28,9 @@
 //   a remessa seguinte leva. Durante o boot do escritório (sessões sendo relidas) nada é observado nem enviado.
 // - Caiu: reconecta com espera crescente e sorteio (2 s → 60 s). `goodbye` do servidor: `deploy` reconecta; os outros
 //   param (veja WorldBuildingStatus.stopped) e avisam a conta (`onGoodbye`).
+// - Erro, `welcome` fora do prazo ou ping sem resposta: a conexão é largada e conta como caída na hora, sem esperar o
+//   `close` dela, que pode não vir (no Node 22, a que falha antes de abrir só dispara `error`; a que fecha com o servidor
+//   mudo ou a rede morta fica em CLOSING até o TCP desistir).
 // - Guarda a última remessa ({at, bytes, uplink, ack}) em memória e em <dataDir>/world-last-uplink.json (modo 600)
 //   para "Ver o que foi enviado": é o mesmo objeto que foi para o fio.
 // - `uplink.ack {error: 'left'}`: a conta saiu do mundo (aqui ou em outro computador); a conta grava a saída e a pausa
@@ -447,13 +450,14 @@ export class BuildingUplink {
       if (this.ws === ws) this.onMessage(ev.data);
     };
     ws.onerror = () => {
-      // O close vem logo depois.
+      // Antes de abrir, o Node 22 só manda o erro (o close nunca vem).
+      this.abandon(ws);
     };
     ws.onclose = () => {
       if (this.ws === ws) this.onClosed();
     };
     this.welcomeTimer = this.timers.setTimeout(() => {
-      if (this.ws === ws && !this.welcomed) ws.close(4000, 'welcome');
+      if (!this.welcomed) this.abandon(ws, 4000, 'welcome');
     }, this.t.welcomeTimeoutMs);
   }
 
@@ -645,6 +649,20 @@ export class BuildingUplink {
     });
   }
 
+  /**
+   * Larga a conexão `ws` (se ainda é a atual) sem esperar o `close` dela: segue na hora como queda (reconexão com espera)
+   * e pede o fechamento; o que ainda vier dela é ignorado (`this.ws !== ws`).
+   */
+  private abandon(ws: SocketLike, code?: number, reason?: string): void {
+    if (this.ws !== ws) return;
+    this.onClosed();
+    try {
+      ws.close(code, reason);
+    } catch {
+      // já fechada
+    }
+  }
+
   /** Esquece a conexão atual: dali em diante os eventos dela são ignorados. */
   private teardown(): void {
     const was = this.welcomed;
@@ -661,8 +679,8 @@ export class BuildingUplink {
 
   private ping(): void {
     if (!this.welcomed || !this.ws) return;
-    // Sem nada do servidor por 2,5 pings: a conexão morreu sem avisar; fecha para reconectar.
-    if (this.now() - this.lastMessageAt > this.t.pingMs * 2.5) return void this.ws.close(4001, 'timeout');
+    // Sem nada do servidor por 2,5 pings: a conexão morreu sem avisar; larga para reconectar.
+    if (this.now() - this.lastMessageAt > this.t.pingMs * 2.5) return this.abandon(this.ws, 4001, 'timeout');
     this.send({ t: 'ping' });
   }
 
