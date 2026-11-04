@@ -177,7 +177,8 @@ Habblaud ships a [mod](https://code.claude.com/docs/en/plugins/mods/overview) (a
 Claude Code) and installs it in each account, through `claude plugin` itself, from this folder. With it:
 
 - each account's **5-hour and weekly usage** shows up live in Habblaud;
-- the terminal shows a line when **another session needs you** (permission or answer);
+- the terminal shows a line when **another session needs you** (permission or answer), in English by default; the
+  plugin's `language` option switches it, and `/habblaud`, to Korean (`ko`) or Portuguese (`pt-BR`);
 - the **`/habblaud`** command becomes available in Claude Code;
 - you can **approve or deny permission requests from the office** ("Do you want to…") and **answer the agent's
   questions**, with the `habblaud-permissoes` plugin (see [Answering from the office](#answering-from-the-office));

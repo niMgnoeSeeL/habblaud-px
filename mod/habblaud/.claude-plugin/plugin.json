@@ -7,5 +7,14 @@
   "homepage": "https://github.com/marmottajr/habblaud#readme",
   "repository": "https://github.com/marmottajr/habblaud",
   "license": "MIT",
-  "keywords": ["habblaud", "escritorio", "uso", "rate-limits", "status"]
+  "keywords": ["habblaud", "escritorio", "uso", "rate-limits", "status"],
+  "userConfig": {
+    "language": {
+      "type": "string",
+      "title": "Language",
+      "description": "Language of the line under the prompt and of /habblaud: en (English), ko (Korean) or pt-BR (Portuguese)",
+      "default": "en",
+      "options": ["en", "ko", "pt-BR"]
+    }
+  }
 }

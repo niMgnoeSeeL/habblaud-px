@@ -10,6 +10,11 @@ do meio (0.**3**.0).
 
 ## [Não lançado]
 
+### Adicionado
+
+- **Mod: idioma da linha embaixo do prompt e do /habblaud.** A opção `language` do plugin habblaud escolhe inglês
+  (`en`, o padrão), coreano (`ko`) ou português (`pt-BR`); antes era sempre português.
+
 ### Corrigido
 
 - **Habblaud World: o prédio volta a se conectar sozinho depois de o computador dormir ou de a rede cair.** Uma

@@ -28,6 +28,9 @@ instalação está no README principal.
   `🏢 2 precisam de você: Valentina (loja-virtual), Elias (app-mobile)` (até 3 nomes, depois "e mais N").
   Ninguém esperando ou Habblaud fora do ar: a linha some; fora do ar, as perguntas passam a ser a cada 30 s até
   ele voltar. Só em sessões que desenham (no `claude -p` não pergunta nada).
+- **Idioma:** a linha embaixo do prompt e o `/habblaud` saem em inglês por padrão
+  (`🏢 Valentina needs you in loja-virtual`); a opção `language` do plugin escolhe `ko` (coreano) ou `pt-BR`
+  (os exemplos desta página). O que cada um espera (`waitingFor`) vem do servidor, no idioma dele (`HABBLAUD_LANG`).
 - **`/habblaud`:** resumo do escritório inteiro, respondido pelo próprio mod (não chama o modelo, não gasta uso):
 
   ```
